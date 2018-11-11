@@ -1848,9 +1848,9 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 		if (rc)
 			SDE_ERROR_CONN(c_conn, "dynamic bit clock set failed, rc: %d", rc);
 
+		break;
 	case CONNECTOR_PROP_HBM:
-		param_info.value = sde_connector_get_property(
-				connector->state, CONNECTOR_PROP_HBM);
+		param_info.value = val;
 		param_info.param_idx = PARAM_HBM_ID;
 		param_info.param_conn_idx = CONNECTOR_PROP_HBM;
 		rc = _sde_connector_update_param(c_conn, &param_info);
@@ -1864,9 +1864,9 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 		/* suspend case: clear stale MISR */
 		if (val == SDE_MODE_DPMS_OFF)
 			memset(&c_conn->previous_misr_sign, 0, sizeof(struct sde_misr_sign));
+		break;
 	case CONNECTOR_PROP_ACL:
-		param_info.value = sde_connector_get_property(
-				connector->state, CONNECTOR_PROP_ACL);
+		param_info.value = val;
 		param_info.param_idx = PARAM_ACL_ID;
 		param_info.param_conn_idx = CONNECTOR_PROP_ACL;
 		rc = _sde_connector_update_param(c_conn, &param_info);
