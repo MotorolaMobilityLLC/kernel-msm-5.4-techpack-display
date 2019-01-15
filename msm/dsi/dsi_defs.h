@@ -271,6 +271,7 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_QSYNC_ON                   Enable qsync mode
  * @DSI_CMD_SET_QSYNC_OFF                  Disable qsync mode
  * @DSI_CMD_SET_CALIBRATION_DATA           Panel calibration data
+ * @DSI_CMD_SET_HBM_FOD_ON:                Turning HBM_FOD on
  * @DSI_CMD_SET_HBM_ON:                    Turning HBM on
  * @DSI_CMD_SET_HBM_OFF:                   Turning HBM off
  * @DSI_CMD_SET_ACL_ON:                    Turning ACL on
@@ -304,6 +305,7 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_QSYNC_ON,
 	DSI_CMD_SET_QSYNC_OFF,
 	DSI_CMD_SET_CALIBRATION_DATA,
+	DSI_CMD_SET_HBM_FOD_ON,
 	DSI_CMD_SET_HBM_ON,
 	DSI_CMD_SET_HBM_OFF,
 	DSI_CMD_SET_ACL_ON,
