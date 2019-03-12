@@ -40,6 +40,7 @@
 #include <linux/kthread.h>
 #include <linux/version.h>
 #include <linux/delay.h>
+#include <linux/notifier.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -1341,6 +1342,7 @@ struct msm_drm_private {
 
 	/* list of component registered for notification */
 	struct blocking_notifier_head component_notifier_list;
+	struct notifier_block msm_drv_notifier;
 };
 
 /* get struct msm_kms * from drm_device * */
