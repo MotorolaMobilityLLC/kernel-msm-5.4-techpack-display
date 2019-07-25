@@ -467,6 +467,7 @@ int dsi_panel_power_on(struct dsi_panel *panel, bool is_cont_splash)
 {
 	int rc = 0;
 
+	DSI_INFO("%s(%s)+\n", __func__, panel->name);
 	rc = dsi_pwr_enable_regulator(&panel->power_info, true);
 	if (rc) {
 		DSI_ERR("[%s] failed to enable vregs, rc=%d\n",
@@ -518,6 +519,7 @@ int dsi_panel_power_off(struct dsi_panel *panel)
 		return rc;
 	}
 
+	DSI_INFO("%s(%s)+\n", __func__, panel->name);
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
 
@@ -3346,7 +3348,7 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 	panel->bl_config.bl_2bytes_enable = utils->read_bool(utils->data,
 			"qcom,bklt-dcs-2bytes-enabled");
 
-	pr_info("[%s] bl_2bytes_enable=%d\n", panel->name,
+	DSI_INFO("[%s] bl_2bytes_enable=%d\n", panel->name,
 			panel->bl_config.bl_2bytes_enable);
 
 	if (panel->bl_config.type == DSI_BACKLIGHT_PWM) {
@@ -6168,6 +6170,7 @@ int dsi_panel_enable(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	DSI_INFO("%s(%s)+\n", __func__, panel->name);
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ON, false);
@@ -6265,6 +6268,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	DSI_INFO("%s(%s)+\n", __func__, panel->name);
 	mutex_lock(&panel->panel_lock);
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
