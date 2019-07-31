@@ -42,6 +42,7 @@
 #define MIPI_DSI_MSG_UNICAST_COMMAND BIT(7)
 
 #define DSI_PANEL_MAX_PANEL_LEN	256
+#define MAX_PARAM_NAME 10
 
 enum dsi_panel_rotation {
 	DSI_PANEL_ROTATE_NONE = 0,
@@ -214,6 +215,27 @@ struct dsi_panel_spr_info {
 	bool enable;
 	enum msm_display_spr_pack_type pack_type;
 	enum msm_display_spr_pack_type_mode pack_type_mode;
+
+};
+enum hbm_state {
+	HBM_OFF_STATE = 0,
+	HBM_ON_STATE,
+	HBM_STATE_NUM
+};
+
+struct panel_param_val_map {
+	int state;
+	enum dsi_cmd_set_type type;
+	struct dsi_panel_cmd_set *cmds;
+};
+
+struct panel_param {
+	const char *param_name;
+	struct panel_param_val_map *val_map;
+	const u16 val_max;
+	const u16 default_value;
+	u16 value;
+	bool is_supported;
 };
 
 struct privacy_cmd_cfg {
@@ -328,6 +350,8 @@ struct dsi_panel {
 
 	u32 disp_on_chk_val;
 	bool no_panel_on_read_support;
+
+	struct panel_param *param_cmds;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
@@ -494,4 +518,7 @@ int dsi_panel_power_on(struct dsi_panel *panel, bool is_cont_splash);
 int dsi_panel_power_off(struct dsi_panel *panel);
 
 int dsi_panel_pinctrl_toggle_te_function(struct dsi_panel *panel);
+int dsi_panel_set_param(struct dsi_panel *panel,
+			struct msm_param_info *param_info);
+
 #endif /* _DSI_PANEL_H_ */
