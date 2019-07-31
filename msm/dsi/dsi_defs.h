@@ -299,6 +299,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_EM_PULSE_SWITCH:           EM pulse switch cmd
  * @DSI_CMD_SET_PRIVACY_LAYER:		   Command to update panel on Privacy layer config
  * @DSI_CMD_SET_BRIGHTNESS:		   Command to update backlight
+ * @DSI_CMD_SET_HBM_ON:                    Turning HBM on
+ * @DSI_CMD_SET_HBM_OFF:                   Turning HBM off
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -346,6 +348,8 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_EM_PULSE_SWITCH,
 	DSI_CMD_SET_PRIVACY_LAYER,
 	DSI_CMD_SET_BRIGHTNESS,
+	DSI_CMD_SET_HBM_ON,
+	DSI_CMD_SET_HBM_OFF,
 	DSI_CMD_SET_MAX
 };
 
