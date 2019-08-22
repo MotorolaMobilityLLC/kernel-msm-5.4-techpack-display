@@ -4773,6 +4773,9 @@ static int dsi_display_res_init(struct dsi_display *display)
 		phy->cfg.split_link.lanes_per_sublink = host->split_link.lanes_per_sublink;
 	}
 
+	dsi_panel_parse_panel_cfg(display->panel,
+				!strcmp(display->display_type, "primary"));
+
 	rc = dsi_display_parse_lane_map(display);
 	if (rc) {
 		DSI_ERR("Lane map not found, rc=%d\n", rc);
@@ -7540,6 +7543,12 @@ int dsi_display_get_info(struct drm_connector *connector,
 	info->esd_rw_check = display->panel->esd_config.esd_enabled &&
 			display->panel->esd_config.status_mode == ESD_MODE_PANEL_RW;
 	info->dpu_dma_enabled = display->panel->host_config.dpu_dma_enabled;
+
+	info->panel_id = display->panel->panel_id;
+	info->panel_ver = display->panel->panel_ver;
+	strncpy(info->panel_name, display->panel->panel_name,
+				sizeof(display->panel->panel_name));
+
 	switch (display->panel->panel_mode) {
 	case DSI_OP_VIDEO_MODE:
 		info->curr_panel_mode = MSM_DISPLAY_VIDEO_MODE;
