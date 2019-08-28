@@ -31,6 +31,9 @@
 #include <drm/drm_atomic_uapi.h>
 #include <drm/drm_probe_helper.h>
 #include <linux/version.h>
+#include <linux/memblock.h>
+#include <linux/string.h>
+#include <linux/slab.h>
 
 #include "msm_drv.h"
 #include "msm_mmu.h"
@@ -68,6 +71,8 @@
 #ifdef CONFIG_DRM_SDE_VM
 #include <linux/gunyah/gh_irq_lend.h>
 #endif
+
+#include "sde_motUtil.h"
 
 #define CREATE_TRACE_POINTS
 #include "sde_trace.h"
@@ -1896,6 +1901,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.post_kickoff = dsi_conn_post_kickoff,
 		.check_status = dsi_display_check_status,
 		.enable_event = dsi_conn_enable_event,
+		.motUtil_transfer = dsi_display_motUtil_transfer,
 		.cmd_transfer = dsi_display_cmd_transfer,
 		.cont_splash_config = dsi_display_cont_splash_config,
 		.cont_splash_res_disable = dsi_display_cont_splash_res_disable,
