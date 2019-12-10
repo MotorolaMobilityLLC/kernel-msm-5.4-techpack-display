@@ -6860,11 +6860,15 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 
 	display->display_type = of_get_property(pdev->dev.of_node,
 				"label", NULL);
-	if (!display->display_type)
+	if (!display->display_type) {
 		display->display_type = "primary";
+		display->display_idx = 0;
+	}
 
-	if (!strcmp(display->display_type, "secondary"))
+	if (!strcmp(display->display_type, "secondary")) {
 		index = DSI_SECONDARY;
+		display->display_idx = 1;
+	}
 
 	mdp_count = of_property_count_u32_elems(pdev->dev.of_node, "qcom,mdp");
 	if (mdp_count == MDP_MAX)
