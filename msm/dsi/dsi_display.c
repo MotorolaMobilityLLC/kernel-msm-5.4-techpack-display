@@ -1137,7 +1137,7 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 	} else if (status_mode == ESD_MODE_PANEL_RW) {
 		/* noop, check will be performed in SDE */
 	} else if (status_mode == ESD_MODE_TE_CHK_REG_RD) {
-		rc =  dsi_display_status_check_te(dsi_display);
+		rc =  dsi_display_status_check_te(dsi_display,te_rechecks);
 		if (rc > 0) {
 			/* after checking for TE, then chk for reg_read status */
 			rc = dsi_display_status_reg_read(dsi_display);
@@ -10051,7 +10051,7 @@ static int dsi_display_chk_esd_recovery(struct dsi_display *display)
 		* if it is not, then trigger the ESD again
 		*/
 		disp_esd_trigger++;
-		if (dsi_display_status_check_te(display) <= 0) {
+		if (dsi_display_status_check_te(display,1) <= 0) {
 			DSI_ERR("ESD: TE Check is still failed. disp_esd_trigger=%d\n",
 						disp_esd_trigger);
 		} else if (dsi_display_status_reg_read(display) <= 0) {
