@@ -33,9 +33,11 @@
 #include "sde_hw_catalog.h"
 #include "dsi_display.h"
 
+#if defined(CONFIG_DRM_DYNAMIC_REFRESH_RATE)
 static struct blocking_notifier_head dsi_freq_head =
 			BLOCKING_NOTIFIER_INIT(dsi_freq_head);
 EXPORT_SYMBOL_GPL(dsi_freq_head);
+#endif
 
 #if IS_ENABLED(CONFIG_ISL97900_LED)
 #include <misc/isl97900_led.h>
@@ -6068,10 +6070,12 @@ int dsi_panel_send_qsync_on_dcs(struct dsi_panel *panel,
 		       panel->name, rc);
 
 	mutex_unlock(&panel->panel_lock);
+#if defined(CONFIG_DRM_DYNAMIC_REFRESH_RATE)
 	/* notify consumers only if refresh rate has been updated */
 	if (!rc)
 		blocking_notifier_call_chain(&dsi_freq_head,
 			(unsigned long)panel->cur_mode->timing.refresh_rate, NULL);
+#endif
 	return rc;
 }
 
