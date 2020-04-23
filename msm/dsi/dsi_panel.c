@@ -5060,6 +5060,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	const char *panel_physical_type;
 	int rc = 0;
 	u32 panel_idx = 0; /* Since only panel support for now */
+	const char *pname;
 
 	panel = kzalloc(sizeof(*panel), GFP_KERNEL);
 	if (!panel)
@@ -5084,6 +5085,15 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 
 	panel->need_post_on_supply =
 		utils->read_bool(utils->data, "qcom,mdss-panel-need-post-on-supply");
+
+	pname = utils->get_property(utils->data,
+				"qcom,mdss-dsi-panel-supplier", NULL);
+	if (!pname || strlen(pname) == 0) {
+		DSI_WARN("Failed to get qcom,mdss-dsi-panel-supplier\n");
+		strlcpy(panel->panel_supplier, DSI_PANEL_UNKNOWN_PANEL_NAME,
+				sizeof(panel->panel_supplier));
+	} else
+		strlcpy(panel->panel_supplier, pname, sizeof(panel->panel_supplier));
 
 	/*
 	 * Set panel type to LCD as default.
