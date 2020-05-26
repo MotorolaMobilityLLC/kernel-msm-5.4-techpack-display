@@ -4269,6 +4269,7 @@ static int dsi_panel_get_pwr_mode(struct dsi_panel *panel, u8 *val)
 	struct dsi_display *display = NULL;
 	u32 flags;
 	u8 payload = MIPI_DCS_GET_POWER_MODE;
+	u32 rx_buf;
 
 	display = container_of(panel->host, struct dsi_display, host);
 	if (!display) {
@@ -4287,7 +4288,7 @@ static int dsi_panel_get_pwr_mode(struct dsi_panel *panel, u8 *val)
 	cmd.msg.tx_len = 1;
 	cmd.msg.tx_buf = &payload;
 	cmd.msg.rx_len = 1;
-	cmd.msg.rx_buf = val;
+	cmd.msg.rx_buf = &rx_buf;
 
 	rc = dsi_display_cmd_mipi_transfer(display, &cmd.msg, flags);
 	if (rc <= 0) {
@@ -4295,6 +4296,8 @@ static int dsi_panel_get_pwr_mode(struct dsi_panel *panel, u8 *val)
 		rc = -EIO;
 	} else
 		rc = 0;
+
+	*val = rx_buf & 0xFF;
 end:
 	return rc;
 
