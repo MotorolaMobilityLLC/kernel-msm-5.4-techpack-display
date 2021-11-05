@@ -304,6 +304,7 @@ struct dp_parser {
 	bool ext_hpd_en;
 	bool is_edp;
 	bool max_fps_mode_en;
+	bool typec_bridge;
 	u32 mst_fixed_port[MAX_DP_MST_STREAMS];
 	u32 qos_cpu_mask;
 	unsigned long qos_cpu_latency;
