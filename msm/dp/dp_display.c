@@ -1574,6 +1574,7 @@ static int dp_display_usbpd_configure_cb(struct device *dev)
 		DP_ERR("no driver data found\n");
 		return -ENODEV;
 	}
+	DP_INFO("\n");
 
 	/*
 	 * When dp is connected during boot, there is a chance that
