@@ -364,6 +364,7 @@ struct dsi_display {
 	struct dsi_display_ops display_ops;
 
 	bool enabled;
+	bool sysfs_add_done;
 };
 
 int dsi_display_dev_probe(struct platform_device *pdev);
