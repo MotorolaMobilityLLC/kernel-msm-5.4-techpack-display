@@ -110,6 +110,7 @@
 
 #define MAX_XIN_COUNT 16
 #define SSPP_SUBBLK_COUNT_MAX 2
+#define MAX_CWB_SESSIONS 1
 
 #define SDE_CTL_CFG_VERSION_1_0_0       0x100
 #define MAX_INTF_PER_CTL_V1                 2
@@ -1569,6 +1570,7 @@ struct sde_perf_cfg {
  * @max_dsc_width      max dsc line width support.
  * @max_mixer_blendstages max layer mixer blend stages or
  *                       supported z order
+ * @max_cwb             max number of cwb supported
  * @max_wb_linewidth   max writeback line width support.
  * @max_wb_linewidth_linear   max writeback line width for linear formats.
  * @max_display_width   maximum display width support.
@@ -1665,6 +1667,7 @@ struct sde_mdss_cfg {
 	u32 max_mixer_width;
 	u32 max_dsc_width;
 	u32 max_mixer_blendstages;
+	u32 max_cwb;
 	u32 max_wb_linewidth;
 	u32 max_wb_linewidth_linear;
 
