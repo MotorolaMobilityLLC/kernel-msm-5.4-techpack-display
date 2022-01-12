@@ -46,7 +46,7 @@ struct dp_aux_private {
 	atomic_t aborted;
 };
 
-#ifdef CONFIG_DYNAMIC_DEBUG
+#if 1 //def CONFIG_DYNAMIC_DEBUG
 static void dp_aux_hex_dump(struct drm_dp_aux *drm_aux,
 		struct drm_dp_aux_msg *msg)
 {
@@ -69,7 +69,7 @@ static void dp_aux_hex_dump(struct drm_dp_aux *drm_aux,
 		hex_dump_to_buffer(msg->buffer + i, linelen, rowsize, 1,
 			linebuf, sizeof(linebuf), false);
 
-		DP_DEBUG("%s%s\n", prefix, linebuf);
+		DP_INFO("%s%s\n", prefix, linebuf);
 	}
 }
 #else
@@ -506,8 +506,12 @@ static ssize_t dp_aux_transfer(struct drm_dp_aux *drm_aux,
 			aux->catalog->update_aux_cfg(aux->catalog,
 				aux->cfg, PHY_AUX_CFG1);
 		aux->catalog->reset(aux->catalog);
+		dp_aux_hex_dump(drm_aux, msg);
+		DP_WARN("%s need retry\n", __func__);
 		goto unlock_exit;
 	} else if (ret < 0) {
+		dp_aux_hex_dump(drm_aux, msg);
+		DP_WARN("%s ret < 0\n", __func__);
 		goto unlock_exit;
 	}
 
