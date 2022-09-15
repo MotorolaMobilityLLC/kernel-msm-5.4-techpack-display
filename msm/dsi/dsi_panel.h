@@ -426,6 +426,8 @@ struct dsi_panel {
 	bool dc_on;
 	bool mot_nt37701A_read_cellid;
 	bool esd_first_check;
+	u32 dc_state;
+	struct msm_param_info curDCModeParaInfo;
 };
 
 bool dsi_display_all_displays_dead(void);
