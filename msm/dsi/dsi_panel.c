@@ -936,6 +936,12 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	case DSI_BACKLIGHT_PWM:
 		rc = dsi_panel_update_pwm_backlight(panel, bl_lvl);
 		break;
+	case DSI_BACKLIGHT_I2C:
+		if (!(bl->i2c_bd))
+			bl->i2c_bd = backlight_device_get_by_type(BACKLIGHT_PLATFORM);
+		else
+			rc = backlight_device_set_brightness(bl->i2c_bd, bl_lvl);
+		break;
 	default:
 		DSI_ERR("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
@@ -948,6 +954,7 @@ static u32 dsi_panel_get_brightness(struct dsi_backlight_config *bl)
 {
 	u32 cur_bl_level;
 	struct backlight_device *bd = bl->raw_bd;
+	struct backlight_device *i2c_bd = bl->i2c_bd;
 
 	/* default the brightness level to 50% */
 	cur_bl_level = bl->bl_max_level >> 1;
@@ -961,6 +968,10 @@ static u32 dsi_panel_get_brightness(struct dsi_backlight_config *bl)
 	case DSI_BACKLIGHT_DCS:
 	case DSI_BACKLIGHT_EXTERNAL:
 	case DSI_BACKLIGHT_PWM:
+	case DSI_BACKLIGHT_I2C:
+		if (i2c_bd && i2c_bd->ops && i2c_bd->ops->get_brightness)
+			cur_bl_level = i2c_bd->ops->get_brightness(i2c_bd);
+		break;
 	default:
 		/*
 		 * Ideally, we should read the backlight level from the
@@ -1006,48 +1017,6 @@ static int dsi_panel_pwm_register(struct dsi_panel *panel)
 	}
 
 	return 0;
-}
-
-static int dsi_panel_parse_fsc_rgb_order(struct dsi_panel *panel,
-		struct dsi_parser_utils *utils)
-{
-	int rc = 0;
-	const char *fsc_rgb_order;
-
-	fsc_rgb_order = utils->get_property(utils->data,
-		"qcom,dsi-panel-fsc-rgb-order", NULL);
-	if (fsc_rgb_order) {
-		if (DSI_IS_FSC_PANEL(fsc_rgb_order)) {
-			strlcpy(panel->fsc_rgb_order, fsc_rgb_order,
-				sizeof(panel->fsc_rgb_order));
-		} else {
-			DSI_ERR("Unrecognized fsc color order-%s\n",
-				fsc_rgb_order);
-			rc = -EINVAL;
-		}
-	}
-
-	return rc;
-}
-
-static int dsi_panel_parse_rgb_led(struct dsi_panel *panel,
-		struct device_node *of_node)
-{
-	int rc = 0;
-
-	if (!panel || !of_node)
-		return -EINVAL;
-
-	if (panel->bl_config.type != DSI_BACKLIGHT_I2C)
-		return 0;
-
-	panel->rgb_left_led_node = of_parse_phandle(of_node,
-		"qcom,panel-rgb-left-led", 0);
-
-	panel->rgb_right_led_node = of_parse_phandle(of_node,
-		"qcom,panel-rgb-right-led", 0);
-
-	return rc;
 }
 
 static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
@@ -4997,14 +4966,6 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	rc = dsi_panel_parse_esd_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse esd config, rc=%d\n", rc);
-
-	rc = dsi_panel_parse_fsc_rgb_order(panel, utils);
-	if (rc)
-		DSI_DEBUG("failed to read fsc color order, rc=%d\n", rc);
-
-	rc = dsi_panel_parse_rgb_led(panel, of_node);
-	if (rc)
-		DSI_DEBUG("failed to get rgb led info, rc=%d\n", rc);
 
 	rc = dsi_panel_parse_local_hbm_config(panel);
 	if (rc)
