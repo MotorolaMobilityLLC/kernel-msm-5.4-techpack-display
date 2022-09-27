@@ -204,6 +204,8 @@ struct dsi_backlight_config {
 
 	/* Use exponent backlight curve */
 	bool bl_is_exponent;
+	u32 brightness_updated;
+	bool bl_double_write;
 };
 
 struct dsi_reset_seq {
