@@ -536,6 +536,8 @@ struct dsi_mode_info {
 	u32 avr_step_fps;
 	u32 esync_emsync_fps;
 	u32 te_pulse_width_us;
+	// Motorola zhanggb, add refreshrate group, IKSWT-18219
+	u32 refresh_rate_group_flag;
 };
 
 /**
