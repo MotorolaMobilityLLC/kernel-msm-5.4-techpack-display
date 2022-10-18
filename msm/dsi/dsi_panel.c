@@ -3549,6 +3549,8 @@ static int dsi_panel_parse_misc_features(struct dsi_panel *panel)
 
 	panel->event_notification_disabled = utils->read_bool(utils->data,
 			"qcom,event-notification-disabled");
+	panel->need_execute_shutdown = utils->read_bool(utils->data,
+			"qcom,platform-need-execute-shutdown");
 
 	panel->skip_panel_off = utils->read_bool(utils->data,
 			"qcom,skip-panel-power-off");

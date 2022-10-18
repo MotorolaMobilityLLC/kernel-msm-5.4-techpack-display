@@ -378,6 +378,7 @@ void dsi_display_dev_remove(struct platform_device *pdev);
 #else
 int dsi_display_dev_remove(struct platform_device *pdev);
 #endif
+void dsi_display_dev_shutdown(struct platform_device *pdev);
 
 /**
  * dsi_display_get_num_of_displays() - returns number of display devices
