@@ -10291,7 +10291,6 @@ int dsi_display_pinctrl_toggle_te_function(void *display)
 	return dsi_panel_pinctrl_toggle_te_function(((struct dsi_display *) display)->panel);
 }
 
-/* start of MMI_STOPSHIP section */
 struct dsi_enable_status {
 	struct dsi_display *display;
 	int probed;
