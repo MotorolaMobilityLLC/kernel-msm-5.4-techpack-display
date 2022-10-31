@@ -1401,6 +1401,7 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 			break;
 		case PARAM_ACL_ID :
 			dsi_panel_set_acl(panel, param_info);
+			break;
 		case PARAM_DC_ID :
 			rc = dsi_panel_set_dc(panel, param_info);
 			break;
