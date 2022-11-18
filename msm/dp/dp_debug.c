@@ -339,7 +339,7 @@ static ssize_t dp_debug_read_dpcd(struct file *file,
 		}
 	}
 
-	len += scnprintf(buf + len, buf_size - len, "%04x: ", debug->dpcd_offset);
+	len += scnprintf(buf + len , buf_size - len, "%04x: ", debug->dpcd_offset);
 
 	while (offset < debug->dpcd_size)
 		len += scnprintf(buf + len, buf_size - len, "%02x ", dpcd[offset++]);
@@ -1974,11 +1974,6 @@ static const struct file_operations dpcd_fops = {
 	.read = dp_debug_read_dpcd,
 };
 
-static const struct file_operations crc_fops = {
-	.open = simple_open,
-	.read = dp_debug_read_crc,
-};
-
 static const struct file_operations connected_fops = {
 	.open = simple_open,
 	.read = dp_debug_read_connected,
@@ -2211,13 +2206,6 @@ static int dp_debug_init_sink_caps(struct dp_debug_private *debug,
 		rc = PTR_ERR(file);
 		DP_ERR("[%s] debugfs dpcd failed, rc=%d\n",
 			DEBUG_NAME, rc);
-		return rc;
-	}
-
-	file = debugfs_create_file("crc", 0644, dir, debug, &crc_fops);
-	if (IS_ERR_OR_NULL(file)) {
-		rc = PTR_ERR(file);
-		DP_ERR("[%s] debugfs crc failed, rc=%d\n", DEBUG_NAME, rc);
 		return rc;
 	}
 
