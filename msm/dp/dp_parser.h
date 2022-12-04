@@ -311,6 +311,7 @@ struct dp_parser {
 	u32 pixel_base_off[MAX_DP_MST_STREAMS];
 	const char *mst_fixed_display_type[MAX_DP_MST_STREAMS];
 	const char *display_type;
+	bool dp_downgrade;
 
 	u8 *swing_hbr2_3;
 	u8 *pre_emp_hbr2_3;

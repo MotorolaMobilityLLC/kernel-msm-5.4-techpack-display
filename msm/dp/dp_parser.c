@@ -180,6 +180,11 @@ static int dp_parser_misc(struct dp_parser *parser)
 					NULL);
 	if (!parser->display_type)
 		parser->display_type = "unknown";
+	parser->dp_downgrade = of_property_read_bool(of_node,
+			"qcom,dp-downgrade");
+
+	DP_INFO("dp_parser_misc max_pclk_khz=%d, max_lclk_khz=%d dp_downgrade=%d\n",
+		parser->max_pclk_khz, parser->max_lclk_khz, parser->dp_downgrade);
 
 
 	rc = of_property_read_u32(of_node,
