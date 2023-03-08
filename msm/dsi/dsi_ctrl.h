@@ -348,6 +348,9 @@ struct dsi_ctrl {
 	u32 pending_cmd_flags;
 	u32 refcount_non_zero;
 	atomic64_t cmd_success_ts;
+
+	// Motorola zhanggb, print MIPI command log when enable
+	u32 mipi_cmd_log_en;
 };
 
 /**
