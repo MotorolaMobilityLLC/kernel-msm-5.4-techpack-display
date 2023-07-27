@@ -283,6 +283,7 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_COLOR_STD:                   COLOR STD mode
  * @DSI_CMD_SET_COLOR_GAME :                    COLOR GAME mode
  * @DSI_CMD_SET_COLOR_NONE:                   COLOR NONE mode
+ * @DSI_CMD_SET_PANEL_CELLID:               Panel cellid
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -326,6 +327,7 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_COLOR_STD,
 	DSI_CMD_SET_COLOR_GAME,
 	DSI_CMD_SET_COLOR_NONE,
+	DSI_CMD_SET_PANEL_CELLID,
 	DSI_CMD_SET_MAX
 };
 
