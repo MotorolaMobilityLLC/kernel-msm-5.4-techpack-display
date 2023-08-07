@@ -338,6 +338,10 @@ int dsi_catalog_phy_pll_setup(struct dsi_phy_hw *phy, u32 pll_ver)
 		phy->ops.configure = dsi_pll_4nm_configure;
 		phy->ops.pll_toggle = dsi_pll_4nm_toggle;
 		break;
+	case DSI_PLL_VERSION_10NM:
+		phy->ops.configure = dsi_pll_10nm_configure;
+		phy->ops.pll_toggle = dsi_pll_10nm_toggle;
+		break;
 	default:
 		phy->ops.configure = NULL;
 		phy->ops.pll_toggle = NULL;
