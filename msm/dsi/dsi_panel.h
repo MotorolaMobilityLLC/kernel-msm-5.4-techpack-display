@@ -406,7 +406,7 @@ struct dsi_panel {
 
 	bool panel_hbm_fod;
 	bool panel_hbm_dim_off;
-
+	bool is_hbm_using_51_cmd;
 	enum panel_hbm_type hbm_type;
 	u32  bl_lvl_during_hbm;
 
