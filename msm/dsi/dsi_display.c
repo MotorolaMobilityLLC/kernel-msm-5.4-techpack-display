@@ -6681,7 +6681,10 @@ static int dsi_display_read_cellid(struct dsi_display *display)
 
 	pr_info("%s ++\n", __func__);
 
+	mutex_lock(&panel->panel_lock);
 	rc = dsi_panel_tx_cellid_cmd(panel);
+	mutex_unlock(&panel->panel_lock);
+
 	if (rc) {
 		pr_err("%s dsi_panel_tx_cellid_cmd failed\n", __func__);
 	} else {
