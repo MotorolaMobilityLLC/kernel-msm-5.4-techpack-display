@@ -6723,7 +6723,10 @@ static ssize_t panelCellId_show(struct device *device,
 
 	if(panel->cellid_config.cellid_enabled)
 	{
-		dsi_display_read_cellid(dsi_display);
+		if(panel->bl_config.bl_level > 0)
+		{
+			dsi_display_read_cellid(dsi_display);
+		}
 
 		if(panel->cellid_config.cellid_rtimes > 1)
 		{
