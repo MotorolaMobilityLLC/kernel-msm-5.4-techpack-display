@@ -508,7 +508,7 @@ static void sde_crtc_calc_fps(struct sde_crtc *sde_crtc)
 		do_div(fps, diff_us);
 		sde_crtc->fps_info.measured_fps = (unsigned int)fps;
 		if (sde_crtc->fps_info.fps_log_enable)
-		    SDE_INFO(" FPS for last (%dms, %d frames) of crtc%d is %d.%d\n",
+		    SDE_INFO(" FPS for last (%llums, %d frames) of crtc%d is %d.%d\n",
 				diff_us/1000, sde_crtc->fps_info.frame_count,
 				sde_crtc->base.base.id, (unsigned int)fps/10,
 				(unsigned int)fps%10);
