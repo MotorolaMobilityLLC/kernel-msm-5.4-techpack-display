@@ -3066,6 +3066,15 @@ static void dp_panel_update_pps(struct dp_panel *dp_panel, char *pps_cmd)
 	catalog->pps_flush(catalog);
 }
 
+bool dp_panel_get_panel_on(struct dp_panel *dp_panel)
+{
+       struct dp_panel_private *panel;
+
+       panel = container_of(dp_panel, struct dp_panel_private, dp_panel);
+
+       return panel->panel_on;
+}
+
 struct dp_panel *dp_panel_get(struct dp_panel_in *in)
 {
 	int rc = 0;
@@ -3141,6 +3150,8 @@ struct dp_panel *dp_panel_get(struct dp_panel_in *in)
 	dp_panel->read_mst_cap = dp_panel_read_mst_cap;
 	dp_panel->convert_to_dp_mode = dp_panel_convert_to_dp_mode;
 	dp_panel->update_pps = dp_panel_update_pps;
+
+	dp_panel->get_panel_on = dp_panel_get_panel_on;
 
 	sde_conn = to_sde_connector(dp_panel->connector);
 	sde_conn->drv_panel = dp_panel;
