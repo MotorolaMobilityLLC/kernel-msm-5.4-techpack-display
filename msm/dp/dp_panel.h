@@ -198,6 +198,8 @@ struct dp_panel {
 		const struct drm_display_mode *drm_mode,
 		struct dp_display_mode *dp_mode);
 	void (*update_pps)(struct dp_panel *dp_panel, char *pps_cmd);
+
+	bool (*get_panel_on)(struct dp_panel *dp_panel);
 };
 
 struct dp_tu_calc_input {
