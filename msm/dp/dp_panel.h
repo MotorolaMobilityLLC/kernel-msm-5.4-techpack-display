@@ -202,6 +202,8 @@ struct dp_panel {
 		struct dp_display_mode *dp_mode);
 	void (*update_pps)(struct dp_panel *dp_panel, char *pps_cmd);
 	void (*set_lttpr_mode)(struct dp_panel *dp_panel, bool is_transparent);
+
+	bool (*get_panel_on)(struct dp_panel *dp_panel);
 };
 
 struct dp_vc_tu_mapping_table {
