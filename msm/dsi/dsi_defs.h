@@ -305,6 +305,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_DFPS_CMD_120:               DFPS switch to 120
  * @DSI_CMD_SET_DFPS_CMD_144:               DFPS switch to 144
  * @DSI_CMD_SET_PANEL_CELLID:               Panel cellid
+ * @DSI_CMD_SET_APL_ON:              apl on
+ * @DSI_CMD_SET_APL_OFF:               apl off
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -366,6 +368,8 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_DFPS_CMD_120,
 	DSI_CMD_SET_DFPS_CMD_144,
 	DSI_CMD_SET_PANEL_CELLID,
+	DSI_CMD_SET_APL_ON,
+	DSI_CMD_SET_APL_OFF,
 	DSI_CMD_SET_MAX
 };
 
