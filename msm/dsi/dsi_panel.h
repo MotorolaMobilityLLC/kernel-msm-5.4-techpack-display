@@ -441,6 +441,7 @@ struct dsi_panel {
 	struct msm_param_info curDCModeParaInfo;
 	bool panel_send_cmd;
 	bool esd_first_check;
+	u32 delayms_after_resetlow;
 };
 
 bool dsi_display_all_displays_dead(void);
