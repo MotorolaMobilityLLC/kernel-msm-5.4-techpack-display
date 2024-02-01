@@ -604,7 +604,8 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	if (gpio_is_valid(panel->reset_config.reset_gpio) &&
 					!panel->reset_gpio_always_on)
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
-	if(panel->delayms_after_resetlow) {
+	if (panel->delayms_after_resetlow) {
+		DSI_DEBUG("delayms_after_resetlow = %u\n", panel->delayms_after_resetlow);
 		usleep_range( panel->delayms_after_resetlow * 1000, panel->delayms_after_resetlow * 1100);
 	}
 
@@ -2992,7 +2993,6 @@ static int dsi_panel_parse_reset_sequence(struct dsi_panel *panel)
 	u32 count = 0;
 	u32 size = 0;
 	u32 *arr_32 = NULL;
-	u32 delayms_after_resetlow = 0;
 	const u32 *arr;
 	struct dsi_parser_utils *utils = &panel->utils;
 	struct dsi_reset_seq *seq;
@@ -3025,10 +3025,10 @@ static int dsi_panel_parse_reset_sequence(struct dsi_panel *panel)
 		goto error;
 	}
 
-	rc = utils->read_u32_array(utils->data, "qcom,delayms_after_resetlow",
-					arr_32, delayms_after_resetlow);
-	if (!rc) {
-		DSI_DEBUG("[%s] set delayms_after_resetlow\n", panel->name);
+	rc = utils->read_u32(utils->data, "qcom,delayms_after_resetlow",
+					&panel->delayms_after_resetlow);
+	if (!rc){
+		DSI_DEBUG("[%s] delayms_after_resetlow = %u\n", panel->name, panel->delayms_after_resetlow);
 	}
 
 	rc = utils->read_u32_array(utils->data, "qcom,mdss-dsi-reset-sequence",
