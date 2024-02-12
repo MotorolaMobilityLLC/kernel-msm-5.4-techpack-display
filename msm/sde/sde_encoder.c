@@ -8315,6 +8315,10 @@ static int _sde_encoder_init_debugfs(struct drm_encoder *drm_enc)
 	debugfs_create_u32("frame_trigger_mode", 0400, sde_enc->debugfs_root,
 			&sde_enc->frame_trigger_mode);
 
+	sde_enc->dynamic_irqs_config = (SDE_ENC_CMD_TEAR_DETECT |
+						SDE_ENC_CMD_TE_DEASSERT |
+						SDE_ENC_CMD_TE_ASSERT);
+
 	debugfs_create_x32("dynamic_irqs_config", 0600, sde_enc->debugfs_root,
 			(u32 *)&sde_enc->dynamic_irqs_config);
 
