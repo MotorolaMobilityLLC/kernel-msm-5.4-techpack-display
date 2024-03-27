@@ -1235,10 +1235,55 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 				alpha_level = lhbm_config->dbv_level/bl_num;
 			else
 				alpha_level = lhbm_config->dbv_level;
+
+			DSI_DEBUG("set_local_hbm_param alpha_level=%d, dbv_level=%d\n ", alpha_level, lhbm_config->dbv_level);
 		}
 
-		for (i =0; i < count; i++) {
+		for (i =0; i < count; i++, cmds++) {
 			payload = (u8 *)cmds->msg.tx_buf;
+		  if(panel->panel_lhbm_2bit) {
+		    //2bit
+		    DSI_DEBUG("set_local_hbm_param 2bit\n");
+			if(param_info->value == HBM_FOD_ON_STATE) {
+				if(payload[0] == lhbm_config->alpha_reg) {
+					if(alpha_level >lhbm_config->alpha_size) {
+						DSI_ERR("unsupport dbv level %d on local hbm\n", alpha_level);
+						rc = -EINVAL;
+						goto end;
+					}
+
+					alpha = lhbm_config->alpha[alpha_level];
+					payload[1] = (alpha&0xff00)>>8;
+					payload[2] = alpha&0xff;
+					DSI_INFO("%s: alpha [%x]=%x%x\n",
+						__func__, payload[0], payload[1], payload[2]);
+					rc =  0;
+					continue;
+				} else if(payload[0] == 0X51 &&
+					lhbm_config->dc_hybird_threshold != 0) {
+					if(alpha_level < lhbm_config->dc_hybird_threshold) {
+						payload[1] = (lhbm_config->dc_hybird_threshold & 0xff00) >> 8;
+						payload[2] = lhbm_config->dc_hybird_threshold & 0xff;
+
+					} else {
+						payload[1] = (alpha_level & 0xff00) >> 8;
+						payload[2] = alpha_level & 0xff;
+					}
+					DSI_INFO("%s: [%x]=%x%x\n",
+						__func__, payload[0], payload[1], payload[2]);
+					continue;
+				}
+			} else if(param_info->value == HBM_OFF_STATE &&
+				payload[0] == 0x51) {
+				payload[1] = (alpha_level&0xff00)>>8;
+				payload[2] = alpha_level&0xff;
+				DSI_INFO("%s: restore backlight level=%d\n",
+				        __func__, alpha_level);
+				rc =  0;
+				goto end;
+			}
+		  } else {
+			//4bit
 			if(param_info->value == HBM_FOD_ON_STATE && payload[0] == lhbm_config->alpha_reg) {
 				if(alpha_level >lhbm_config->alpha_size) {
 					DSI_ERR("unsupport dbv level %d on local hbm\n", lhbm_config->dbv_level);
@@ -1277,7 +1322,7 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 				rc =  0;
 				goto end;
 			}
-			cmds++;
+		  }
 		}
 	}
 
@@ -4929,6 +4974,11 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
 
 	panel->panel_hbm_dim_off = of_property_read_bool(of_node,
 				"qcom,mdss-dsi-hbm-dim-off");
+
+	panel->panel_lhbm_2bit = of_property_read_bool(of_node,
+				"qcom,mdss-dsi-lhbm-2bit");
+	if (panel->panel_lhbm_2bit)
+		DSI_INFO("mdss-dsi-lhbm-2bit enable\n");
 
 	panel->tp_state_check_enable = of_property_read_bool(of_node,
 				"qcom,tp_state_check_enable");
