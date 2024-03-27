@@ -435,6 +435,7 @@ struct dsi_panel {
 	int panel_recovery_retry;
 	bool is_panel_dead;
        int paramVersion;
+	bool hbm_detect_fps;
 	bool mot_nt37705A_read_cellid;
 	int dc_state;
 	int panel_power_cnt;

@@ -1328,6 +1328,38 @@ static int dsi_panel_lhbm_waitfor_fps_valid(struct dsi_panel *panel)
 	return 0;
 }
 
+void update_hbm_cmd_bronco(struct dsi_panel *panel,
+                        struct msm_param_info *param_info)
+{
+	struct panel_param_val_map *param_map;
+	struct panel_param_val_map *param_map_state;
+	struct dsi_cmd_desc *cmds;
+	u32 i;
+	u32 count;
+	u8 *payload;
+	param_map = panel->param_cmds[param_info->param_idx].val_map;
+	param_map_state = &param_map[param_info->value];
+	if (!param_map_state->cmds || !param_map_state->cmds->cmds) {
+		DSI_ERR("%s:Invalid cmds or cmds->cmds\n", __func__);
+		return;
+	}
+
+	cmds = param_map_state->cmds->cmds;
+	count = param_map_state->cmds->count;
+
+	mutex_lock(&panel->panel_lock);
+
+	for ( i =0; i < count; i++,cmds++) {
+		payload = (u8 *)cmds->msg.tx_buf;
+		if (payload[0] == 0X62) {
+			if(panel->cur_mode->timing.refresh_rate == 90) payload[1] = 0x01;
+			else payload[1] = 0x00;
+			pr_info("%s: payload[0] = 0x%x payload[1] = 0x%x", __func__, payload[0],payload[1]);
+		}
+	}
+	mutex_unlock(&panel->panel_lock);
+}
+
 static int dsi_panel_set_hbm(struct dsi_panel *panel,
                         struct msm_param_info *param_info)
 {
@@ -1336,6 +1368,9 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel,
 	struct dsi_panel_lhbm_config *lhbm_config = &panel->lhbm_config;
 
 	pr_info("Set HBM to (%d)\n", param_info->value);
+
+	if(panel->hbm_detect_fps && param_info->value != HBM_FOD_ON_STATE)
+		update_hbm_cmd_bronco(panel, param_info);
 
 	if(lhbm_config->enable && param_info->value != HBM_ON_STATE) {
 		dsi_panel_set_local_hbm_param(panel, param_info, lhbm_config);
@@ -4908,6 +4943,12 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
        } else {
            DSI_INFO("got paramVersion %d from qcom,mdss-dsi-panel-param-verision\n", panel->paramVersion);
        }
+
+	panel->hbm_detect_fps = of_property_read_bool(of_node,
+				"qcom,mdss-dsi-hbm-detect-fps");
+	if (panel->hbm_detect_fps)
+		DSI_INFO("mdss-dsi-hbm-detect-fps enable\n");
+
 	panel->mot_nt37705A_read_cellid = of_property_read_bool(of_node,
 				"qcom,mot_nt37705A_read_cellid");
 
