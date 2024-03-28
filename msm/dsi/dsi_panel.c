@@ -5886,8 +5886,11 @@ int dsi_panel_prepare(struct dsi_panel *panel)
 			goto error;
 		}
 	}
+	pr_info("[drm] dsi_panel_tx_cmd_set start\n");
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PRE_ON);
+	pr_info("[drm] dsi_panel_tx_cmd_set end\n");
+
 	if (rc) {
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_PRE_ON cmds, rc=%d\n",
 		       panel->name, rc);
