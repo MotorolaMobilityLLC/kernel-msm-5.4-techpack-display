@@ -1690,7 +1690,7 @@ void sde_connector_helper_bridge_disable(struct drm_connector *connector)
 	struct dsi_display *display;
 	bool poms_pending = false;
 	struct sde_kms *sde_kms;
-
+	int cached_brightness = 0;
 	sde_kms = sde_connector_get_kms(connector);
 	if (!sde_kms) {
 		SDE_ERROR("invalid kms\n");
@@ -1698,6 +1698,7 @@ void sde_connector_helper_bridge_disable(struct drm_connector *connector)
 	}
 
 	c_conn = to_sde_connector(connector);
+	cached_brightness = c_conn->bl_device->props.brightness;
 	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
 		display = _sde_connector_get_display(c_conn);
 		if (!display)
@@ -1725,6 +1726,11 @@ void sde_connector_helper_bridge_disable(struct drm_connector *connector)
 	c_conn->allow_bl_update = false;
 	if (c_conn->vrr_caps.video_psr_support || c_conn->vrr_caps.arp_support)
 		c_conn->qsync_mode = SDE_RM_QSYNC_DISABLED;
+
+	if(cached_brightness > 0){
+		mdelay(20);
+	}
+
 }
 
 void sde_connector_helper_bridge_post_disable(struct drm_connector *connector)
