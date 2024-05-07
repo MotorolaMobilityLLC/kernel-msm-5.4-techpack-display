@@ -1617,4 +1617,11 @@ static inline void sde_connector_backlight_lock(struct sde_connector *c_conn, bo
 		mutex_unlock(&c_conn->bl_vrr.bl_lock);
 }
 
+/*
+ *sde_connector_get_avail_res_info - get available resource information
+ * @conn: Pointer to sde connector structure
+ * @avail_res: Pointer to available resources
+ */
+void sde_connector_get_avail_res_info(struct drm_connector *conn,
+		struct msm_resource_caps_info *avail_res);
 #endif /* _SDE_CONNECTOR_H_ */
