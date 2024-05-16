@@ -976,8 +976,13 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		return 0;
 
 	if(panel->lhbm_config.enable) {
-		panel->lhbm_config.dbv_level = bl_lvl;
-		DSI_DEBUG("backlight type:%d dbv lvl:%d\n", bl->type, bl_lvl);
+		if (bl_lvl) {
+			panel->lhbm_config.dbv_level = bl_lvl;
+			DSI_DEBUG("backlight type:%d dbv lvl:%d\n", bl->type, bl_lvl);
+		}
+		else {
+			DSI_INFO("bl_lvl 0, keep last dbv_level:%d\n", panel->lhbm_config.dbv_level);
+		}
 	}
 
 	if (dsi_panel_set_hbm_backlight(panel, &bl_lvl))
