@@ -253,6 +253,19 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 		goto error;
 	}
 
+	/* Although the upper layer drawing is ready, some panels will still have a splash screen
+	   when the backlight is turned on. This splash maybe caused by screen refresh, or dirty
+	   data transmmitted by mipi. Add a workaround that turn on backlight with delay to avoid
+	   the flickering issue. */
+	if(panel->bl_config.bl_enable_delay) {
+		if(!panel->bl_config.bl_level && bl_lvl) {
+			mutex_unlock(&panel->panel_lock);
+			DSI_INFO("turn on bl bl_level %u  with delay %u ms.\n",(u32)bl_lvl, panel->bl_config.bl_enable_delay);
+			msleep(panel->bl_config.bl_enable_delay);
+			mutex_lock(&panel->panel_lock);
+		}
+	}
+
 	// Print log 1. Every 500ms.  2. Trend change  3. include 0 value
 	c_conn = to_sde_connector(connector);
 	if (bl_lvl != panel->bl_config.bl_level)

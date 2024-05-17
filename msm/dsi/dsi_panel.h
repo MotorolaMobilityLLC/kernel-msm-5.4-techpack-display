@@ -208,6 +208,9 @@ struct dsi_backlight_config {
 
 	/* Use exponent backlight curve */
 	bool bl_is_exponent;
+
+	/* backlight enable delay time */
+	u32 bl_enable_delay;
 };
 
 struct dsi_reset_seq {

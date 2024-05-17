@@ -3550,6 +3550,15 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 	panel->bl_config.bl_is_exponent = utils->read_bool(utils->data,
 			"qcom,mdss-dsi-bl-is-exponent");
 
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-bl-enable-delay-ms", &val);
+	if (rc) {
+		panel->bl_config.bl_enable_delay = 0;
+		DSI_DEBUG("[%s] set default bl enable delay to 0ms\n", panel->name);
+	} else {
+		panel->bl_config.bl_enable_delay = val;
+	}
+
+
 	DSI_INFO("[%s] bl_2bytes_enable=%d, bl_is_exponent=%d\n", panel->name,
 			panel->bl_config.bl_2bytes_enable, panel->bl_config.bl_is_exponent );
 
