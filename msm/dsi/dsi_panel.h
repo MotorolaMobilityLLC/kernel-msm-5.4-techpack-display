@@ -275,6 +275,7 @@ struct dsi_panel_lhbm_config {
 	u32 alpha_reg;
 	u32 alpha_size;
 	u32 *alpha;
+	u32 ddic_type;
 	bool lhbm_wait_for_fps_valid;
 	u32 lhbm_wait_for_fps_count;
 	u32 lhbm_wait_for_fps_interval;

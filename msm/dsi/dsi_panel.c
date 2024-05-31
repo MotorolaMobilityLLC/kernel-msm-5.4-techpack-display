@@ -1304,7 +1304,35 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 		for (i =0; i < count; i++,cmds++) {
 			payload = (u8 *)cmds->msg.tx_buf;
 			if(param_info->value == HBM_FOD_ON_STATE) {
-				if(payload[0] == lhbm_config->alpha_reg) {
+				if(lhbm_config->ddic_type == 0x6126) { //For VTDR6126
+					if(payload[0] == lhbm_config->alpha_reg) {
+						if(hbm_bl_lvl >lhbm_config->alpha_size) {
+							DSI_ERR("unsupport dbv level %d on local hbm\n", lhbm_config->dbv_level);
+							rc = -EINVAL;
+							goto end;
+						}
+						alpha = lhbm_config->alpha[hbm_bl_lvl];
+
+						if(hbm_bl_lvl > lhbm_config->dc_hybird_threshold){
+							payload[1] = 0x10;
+							payload[2] = 0x00;
+							payload[3] = (lhbm_config->dbv_level & 0xff00) >> 8;
+							payload[4] = lhbm_config->dbv_level & 0xff;
+							DSI_INFO("%s: alpha [%x]=%x%x%x%x  alpha_level = %d backlight level=%d\n ",
+								__func__, payload[0], payload[1], payload[2], payload[3], payload[4],hbm_bl_lvl,lhbm_config->dbv_level);
+						}else{
+							payload[1] = (alpha&0xff00)>>8;
+							payload[2] = alpha&0xff;
+							payload[3] = ((lhbm_config->dc_hybird_threshold+1) & 0xff00) >> 8;
+							payload[4] = (lhbm_config->dc_hybird_threshold+1) & 0xff;
+							DSI_INFO("%s: alpha [%x]=%x%x%x%x  alpha_level = %d backlight level=%d\n ",
+								__func__, payload[0], payload[1], payload[2], payload[3], payload[4],hbm_bl_lvl,lhbm_config->dbv_level);
+						}
+						rc =  0;
+						goto end;
+                    }
+				} else { //For VTDR6115 or other DDICs
+					if(payload[0] == lhbm_config->alpha_reg) {
 					if(hbm_bl_lvl >lhbm_config->alpha_size) {
 						DSI_ERR("unsupport dbv level %d on local hbm\n", hbm_bl_lvl);
 						rc = -EINVAL;
@@ -1318,19 +1346,20 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 						__func__, payload[0], payload[1], payload[2]);
 					rc =  0;
 					continue;
-				} else if(payload[0] == 0X51 &&
-					lhbm_config->dc_hybird_threshold != 0) {
-					if(hbm_bl_lvl < lhbm_config->dc_hybird_threshold) {
-						payload[1] = (lhbm_config->dc_hybird_threshold & 0xff00) >> 8;
-						payload[2] = lhbm_config->dc_hybird_threshold & 0xff;
+					} else if(payload[0] == 0X51 &&
+						lhbm_config->dc_hybird_threshold != 0) {
+						if(hbm_bl_lvl < lhbm_config->dc_hybird_threshold) {
+							payload[1] = (lhbm_config->dc_hybird_threshold & 0xff00) >> 8;
+							payload[2] = lhbm_config->dc_hybird_threshold & 0xff;
 
-					} else {
-						payload[1] = (hbm_bl_lvl & 0xff00) >> 8;
-						payload[2] = hbm_bl_lvl & 0xff;
+						} else {
+							payload[1] = (hbm_bl_lvl & 0xff00) >> 8;
+							payload[2] = hbm_bl_lvl & 0xff;
+						}
+						DSI_INFO("%s: [%x]=%x%x\n",
+							__func__, payload[0], payload[1], payload[2]);
+						continue;
 					}
-					DSI_INFO("%s: [%x]=%x%x\n",
-						__func__, payload[0], payload[1], payload[2]);
-					continue;
 				}
 			} else if(param_info->value == HBM_OFF_STATE &&
 				payload[0] == 0x51) {
@@ -4662,6 +4691,15 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 			DSI_ERR("%s:qcom,mdss-dsi-panel-local-hbm-DC-HYBIRD-THRESHOLD-BL is not defined, set it to 0\n", __func__);
 			lhbm_config->dc_hybird_threshold = 0;
 		}
+
+		rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-panel-local-hbm-DDIC-type",
+			&(lhbm_config->ddic_type));
+		if (rc) {
+			DSI_ERR("%s:qcom,mdss-dsi-panel-local-hbm-DDIC-type is not defined, set it to 0\n", __func__);
+			lhbm_config->ddic_type = 0;
+		}
+
 
 		lhbm_config->lhbm_wait_for_fps_valid = utils->read_bool(utils->data,
 			"qcom,mdss-dsi-panel-lhbm-wait-fps-valid");
