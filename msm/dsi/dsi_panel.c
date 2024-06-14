@@ -5085,6 +5085,14 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
 	panel->check_pcd = of_property_read_bool(of_node,
 				"qcom,check_pcd");
 
+	rc = of_property_read_u32(of_node, "qcom,mdss-dsi-cmd-set-off-delay-ms", &panel->dsi_cmd_set_off_delay);
+	if (rc) {
+		panel->dsi_cmd_set_off_delay = 0;
+		DSI_DEBUG("[%s] dsi cmd set delay to 0ms when sleep in \n", panel->name);
+	} else {
+		DSI_DEBUG("[%s] dsi cmd set delay to %dms when sleep in \n", panel->name, panel->dsi_cmd_set_off_delay);
+	}
+
 	return rc;
 }
 
@@ -6731,6 +6739,14 @@ int dsi_panel_disable(struct dsi_panel *panel)
 			panel->power_mode == SDE_MODE_DPMS_LP2))
 			dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 				"ibb", REGULATOR_MODE_STANDBY);
+
+		if(panel->dsi_cmd_set_off_delay) {
+			mutex_unlock(&panel->panel_lock);
+			DSI_INFO("dsi set cmd with delay %d ms when sleep in.\n", panel->dsi_cmd_set_off_delay);
+			msleep(panel->dsi_cmd_set_off_delay);
+			mutex_lock(&panel->panel_lock);
+		}
+
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
 		if (rc) {
 			/*
