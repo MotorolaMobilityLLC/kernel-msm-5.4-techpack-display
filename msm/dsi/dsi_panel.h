@@ -220,6 +220,8 @@ struct dsi_panel_reset_config {
 	int vio_en_gpio;
 	int vci_en_gpio;
 	int touch_rst_gpio;
+	int touch_cs_gpio;
+	int touch_int_gpio;
 };
 
 enum esd_check_status_mode {

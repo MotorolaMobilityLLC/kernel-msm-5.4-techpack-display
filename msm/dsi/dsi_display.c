@@ -6468,6 +6468,7 @@ void dsi_display_dev_shutdown(struct platform_device *pdev)
 			DSI_WARN("set dir for panel test gpio failed rc=%d\n", rc);
 	}
 
+	/*touch rst*/
 	if (gpio_is_valid(panel->reset_config.touch_rst_gpio)) {
 		rc = gpio_request(panel->reset_config.touch_rst_gpio, "touch-rst-pin");
 		if (rc) {
@@ -6479,6 +6480,38 @@ void dsi_display_dev_shutdown(struct platform_device *pdev)
 		}
 	} else {
 		DSI_INFO("[%s] touch reset gpio is not specified\n", panel->name);
+	}
+
+	/*touch int*/
+	if (gpio_is_valid(panel->reset_config.touch_int_gpio)) {
+		rc = gpio_request(panel->reset_config.touch_int_gpio, "touch-int-pin");
+		if (rc) {
+			DSI_ERR("request for touch-int-pin failed, rc=%d\n", rc);
+			gpio_free(panel->reset_config.touch_int_gpio);
+			gpio_direction_output(panel->reset_config.touch_int_gpio, 0);
+			gpio_set_value(panel->reset_config.touch_int_gpio, 0);
+		} else {
+			gpio_direction_output(panel->reset_config.touch_int_gpio, 0);
+			gpio_set_value(panel->reset_config.touch_int_gpio, 0);
+		}
+	} else {
+		DSI_INFO("[%s] touch int gpio is not specified\n", panel->name);
+	}
+
+	/*touch cs*/
+	if (gpio_is_valid(panel->reset_config.touch_cs_gpio)) {
+		rc = gpio_request(panel->reset_config.touch_cs_gpio, "touch-cs-pin");
+		if (rc) {
+			DSI_ERR("request for touch-cs-pin failed, rc=%d\n", rc);
+			gpio_free(panel->reset_config.touch_cs_gpio);
+			gpio_direction_output(panel->reset_config.touch_cs_gpio, 0);
+			gpio_set_value(panel->reset_config.touch_cs_gpio, 0);
+		} else {
+			gpio_direction_output(panel->reset_config.touch_cs_gpio, 0);
+			gpio_set_value(panel->reset_config.touch_cs_gpio, 0);
+		}
+	} else {
+		DSI_INFO("[%s] touch cs gpio is not specified\n", panel->name);
 	}
 
 	mdelay(5);

@@ -3375,6 +3375,8 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 	char *reset_gpio_name, *mode_set_gpio_name;
 	char *vio_en_gpio_name, *vci_en_gpio_name;
 	char *touch_rst_gpio_name;
+	char *touch_cs_gpio_name;
+	char *touch_int_gpio_name;
 
 	if (!strcmp(panel->type, "primary")) {
 		reset_gpio_name = "qcom,platform-reset-gpio";
@@ -3382,12 +3384,16 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 		vio_en_gpio_name = "qcom,platform-vio-enable-gpio";
 		vci_en_gpio_name = "qcom,platform-vci-enable-gpio";
 		touch_rst_gpio_name = "touch-rst-pin";
+		touch_cs_gpio_name = "touch-cs-pin";
+		touch_int_gpio_name = "touch-int-pin";
 	} else {
 		reset_gpio_name = "qcom,platform-sec-reset-gpio";
 		mode_set_gpio_name = "qcom,panel-sec-mode-gpio";
 		vio_en_gpio_name = "qcom,platform-sec-vio-enable-gpio";
 		vci_en_gpio_name = "qcom,platform-sec-vci-enable-gpio";
 		touch_rst_gpio_name = "touch-rst-pin";
+		touch_cs_gpio_name = "touch-cs-pin";
+		touch_int_gpio_name = "touch-int-pin";
 	}
 
 	panel->reset_config.reset_gpio = utils->get_named_gpio(utils->data,
@@ -3434,6 +3440,16 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 		utils->data, touch_rst_gpio_name, 0);
 	if (!gpio_is_valid(panel->reset_config.touch_rst_gpio))
 		DSI_DEBUG("touch_rst_gpio not specified\n");
+
+	panel->reset_config.touch_cs_gpio = utils->get_named_gpio(
+		utils->data, touch_cs_gpio_name, 0);
+	if (!gpio_is_valid(panel->reset_config.touch_cs_gpio))
+		DSI_DEBUG("touch_cs_gpio not specified\n");
+
+	panel->reset_config.touch_int_gpio = utils->get_named_gpio(
+		utils->data, touch_int_gpio_name, 0);
+	if (!gpio_is_valid(panel->reset_config.touch_int_gpio))
+		DSI_DEBUG("touch_int_gpio not specified\n");
 
 	data = utils->get_property(utils->data,
 		"qcom,mdss-dsi-mode-sel-gpio-state", NULL);
