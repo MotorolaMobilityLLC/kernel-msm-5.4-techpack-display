@@ -3956,7 +3956,6 @@ static bool sde_kms_in_trusted_vm(const struct msm_kms *kms)
 
 	return sde_in_trusted_vm(sde_kms);
 }
-
 static int _sde_kms_null_commit(struct drm_device *dev,
 		struct drm_encoder *enc)
 {
