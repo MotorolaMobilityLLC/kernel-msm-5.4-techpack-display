@@ -1693,7 +1693,7 @@ int mot_nt37705A_display_read_cellid(struct dsi_display_ctrl *ctrl,
 		DSI_ERR("prepare for rx cmd transfer failed rc=%d\n", rc);
 		return rc;
 	}
-	rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &cmds);
+	rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &cmds, false);
 
 	if (rc <= 0) {
 		DSI_ERR("rx cmd transfer failed rc=%d\n", rc);
