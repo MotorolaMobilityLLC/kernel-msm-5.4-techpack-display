@@ -1685,7 +1685,7 @@ int dsi_display_read_elvss_volt(void *display)
 	}
 
 	dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
-		DSI_ALL_CLKS, DSI_CLK_ON);
+		DSI_CORE_CLK | DSI_LINK_CLK, DSI_CLK_ON);
 
 	dsi_panel_get_elvss_data(panel);
 	elvss_vl = dsi_display_elvss_read(dsi_display);
@@ -1700,7 +1700,7 @@ int dsi_display_read_elvss_volt(void *display)
 		DSI_WARN("read elvss volt failed\n");
 	}
 	dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
-		DSI_ALL_CLKS, DSI_CLK_OFF);
+		DSI_CORE_CLK | DSI_LINK_CLK, DSI_CLK_OFF);
 
 release_panel_lock:
 	dsi_panel_release_panel_lock(panel);
