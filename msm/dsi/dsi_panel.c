@@ -836,7 +836,7 @@ static int dsi_panel_dfps_tx_cmd_set(struct dsi_panel *panel,
 		if (async) cmds->msg.flags |= MIPI_DSI_MSG_ASYNC_OVERRIDE;
 		else cmds->msg.flags &= ~MIPI_DSI_MSG_ASYNC_OVERRIDE;
 
-		len = dsi_host_transfer_sub(panel->host, cmds);
+		len = dsi_host_transfer_sub(panel->host, cmds, false);
 		if (len < 0) {
 			rc = len;
 			DSI_ERR("failed to set cmds(%d), rc=%d\n", type, rc);
@@ -1142,7 +1142,7 @@ static int dsi_panel_tx_send_mot_cmd(struct dsi_panel *panel,
 		if (state == DSI_CMD_SET_STATE_LP)
 			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
 
-		len = dsi_host_transfer_sub(panel->host, cmds);
+		len = dsi_host_transfer_sub(panel->host, cmds, false);
 		if (len < 0) {
 			rc = len;
 			DSI_ERR("failed to set dsi_panel_tx_send_mot_cmd  cmds, rc=%d\n", rc);
@@ -1356,7 +1356,7 @@ static int dsi_panel_tx_send_param_cmd(struct dsi_panel *panel,
 		if (state == DSI_CMD_SET_STATE_LP)
 			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
 
-		len = dsi_host_transfer_sub(panel->host, cmds);
+		len = dsi_host_transfer_sub(panel->host, cmds, false);
 		if (len < 0) {
 			rc = len;
 			DSI_ERR("failed to set dsi_panel_tx_send_param_cmd  cmds, rc=%d\n", rc);
@@ -2963,10 +2963,10 @@ int dsi_panel_parse_panel_cfg(struct dsi_panel *panel, bool is_primary)
 
 	if (!pname || strlen(pname) == 0) {
 		DSI_WARN("Failed to get mmi,panel_name\n");
-		strlcpy(panel->panel_name, DSI_PANEL_UNKNOWN_PANEL_NAME,
+		strscpy(panel->panel_name, DSI_PANEL_UNKNOWN_PANEL_NAME,
 				sizeof(panel->panel_name));
 	} else
-		strlcpy(panel->panel_name, pname, sizeof(panel->panel_name));
+		strscpy(panel->panel_name, pname, sizeof(panel->panel_name));
 
 	DSI_DEBUG("esd_utage_enable=%d\n", panel->esd_utag_enable);
 
@@ -5955,10 +5955,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 				"qcom,mdss-dsi-panel-supplier", NULL);
 	if (!pname || strlen(pname) == 0) {
 		DSI_WARN("Failed to get qcom,mdss-dsi-panel-supplier\n");
-		strlcpy(panel->panel_supplier, DSI_PANEL_UNKNOWN_PANEL_NAME,
+		strscpy(panel->panel_supplier, DSI_PANEL_UNKNOWN_PANEL_NAME,
 				sizeof(panel->panel_supplier));
 	} else
-		strlcpy(panel->panel_supplier, pname, sizeof(panel->panel_supplier));
+		strscpy(panel->panel_supplier, pname, sizeof(panel->panel_supplier));
 
 	/*
 	 * Set panel type to LCD as default.
@@ -7909,7 +7909,7 @@ int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel)
 			cmds->ctrl_flags = DSI_CTRL_CMD_READ;
 		}
 
-		len = dsi_host_transfer_sub(panel->host, cmds);
+		len = dsi_host_transfer_sub(panel->host, cmds, false);
 		if (len < 0) {
 			rc = len;
 			DSI_ERR("failed to set DSI_CMD_SET_PANEL_CELLID  cmds, rc=%d\n", rc);
@@ -7935,10 +7935,10 @@ void set_panelpcdcheck_enable(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 	if(panel->panelPcdCheck_enable > 0){
 		printk("Panel pcd check enable\n");
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_ENABLE);
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_ENABLE, false);
 	}else{
 		printk("susan Panel pcd check disable\n");
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_DISABLE);
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_DISABLE, false);
 	}
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PCD_DISABLE cmds, rc=%d\n",
