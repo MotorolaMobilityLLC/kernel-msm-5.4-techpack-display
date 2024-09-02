@@ -1991,8 +1991,8 @@ static void dp_display_connect_work(struct work_struct *work)
 	}
 
 	if (dp_display_state_is(DP_STATE_DISCONNECT_NOTIFIED) && dp->hpd->hpd_high) {
-		if (!dp->debug->sim_mode && !dp->parser->no_aux_switch && !dp->parser->gpio_aux_switch) {
-			dp->aux->aux_switch(dp->aux, true, dp->hpd->orientation);
+		if (!dp->debug->sim_mode && !dp->no_aux_switch && !dp->parser->gpio_aux_switch) {
+			dp->aux->switch_configure(dp->aux, true, dp->hpd->orientation);
 		}
 	}
 
