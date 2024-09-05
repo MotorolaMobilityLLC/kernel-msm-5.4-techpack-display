@@ -808,7 +808,7 @@ static int update_redriver_seq(struct dp_ctrl_private *ctrl)
 		ctrl->link->link_params.lane_count == 2 &&
 		ctrl->link->phy_params.v_level == 0 &&
 		ctrl->link->phy_params.p_level == 0) {
-#MMI_STOPSHIP <msm/dp>: temp remove for rebase build pass
+/*MMI_STOPSHIP <msm/dp>: temp remove for rebase build pass*/
 			//dp_ctrl_set_usb_redriver_eq(ctrl);
 	}
 
