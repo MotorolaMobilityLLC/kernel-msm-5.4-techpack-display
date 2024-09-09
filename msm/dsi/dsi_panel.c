@@ -1735,6 +1735,10 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	if(utils->read_bool(utils->data, "qcom,framerate-group-special-idle-10hz"))
 	    mode->refresh_rate_group_flag |= RRGSFlag_Special_Idle_10Hz;
 	// END Motorola zhanggb, IKSWT-18219
+	if(utils->read_bool(utils->data, "qcom,framerate-group-partition-refreshrate"))
+	    mode->refresh_rate_group_flag |= RRGSFlag_Partition_Refreshrate;
+	if(utils->read_bool(utils->data, "qcom,framerate-group-partition-refreshrate-lowpower"))
+	    mode->refresh_rate_group_flag |= RRGSFlag_Partition_Refreshrate_LP;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-width",
 				  &mode->h_active);
