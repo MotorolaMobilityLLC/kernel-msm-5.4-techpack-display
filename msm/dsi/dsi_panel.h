@@ -474,6 +474,7 @@ struct dsi_panel {
 	bool esd_first_check;
 	bool check_pcd;
 	int panelPcdCheck_enable;
+	struct sde_partition_refreshrate cur_partition_refreshrate;
 };
 
 bool dsi_display_all_displays_dead(void);
@@ -636,6 +637,9 @@ int dsi_panel_parse_freq_step_table(struct dsi_display_mode *mode,
 				struct dsi_parser_utils *utils);
 int dsi_panel_set_param(struct dsi_panel *panel,
 			struct msm_param_info *param_info);
+
+int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
+				struct sde_partition_refreshrate *prr_info);
 
 void dsi_panel_reset_param(struct dsi_panel *panel);
 
