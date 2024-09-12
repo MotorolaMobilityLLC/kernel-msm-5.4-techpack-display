@@ -1599,6 +1599,22 @@ void dsi_panel_reset_param(struct dsi_panel *panel)
 	}
 }
 
+int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
+				struct sde_partition_refreshrate *prr_info)
+{
+	int rc = 0;
+
+	if (!panel || !prr_info) {
+                DSI_ERR("invalid params\n");
+                return -EINVAL;
+        }
+
+	DSI_INFO("%s: [%d %d %d %d %d %d]\n", __func__,
+              prr_info->refreshrate1st, prr_info->boundaryLine1st, prr_info->refreshrate2nd, prr_info->boundaryLine2nd, prr_info->refreshrate3rd, prr_info->reserved);
+        memcpy(&panel->cur_partition_refreshrate, prr_info, sizeof(struct sde_partition_refreshrate));
+	return rc;
+}
+
 static int dsi_panel_bl_register(struct dsi_panel *panel)
 {
 	int rc = 0;

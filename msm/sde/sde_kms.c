@@ -4229,6 +4229,38 @@ static int sde_kms_set_panel_feature(const struct msm_kms *kms,
 	return rc;
 }
 
+static int sde_kms_set_partition_refreshrate(const struct msm_kms *kms,
+		struct sde_partition_refreshrate prr_info)
+{
+	struct sde_kms *sde_kms;
+	struct dsi_display *display;
+	int rc = 0;
+	int i = 0;
+
+	if (!kms) {
+		SDE_ERROR("invalid input args\n");
+		return -EINVAL;
+	}
+
+	sde_kms = to_sde_kms(kms);
+	for (i = 0; i < sde_kms->dsi_display_count; i++) {
+		display = (struct dsi_display *)sde_kms->dsi_displays[i];
+		if(!display->panel->panel_send_cmd) {
+			continue;
+		}
+		rc = dsi_display_set_partition_refreshrate(display, &prr_info);
+		if (rc) {
+			SDE_ERROR("dsi_displays[%d] set partition refreshrate [%d  %d  %d  %d  %d] failed\n",
+				i, prr_info.refreshrate1st, prr_info.boundaryLine1st, prr_info.refreshrate2nd, prr_info.boundaryLine2nd, prr_info.refreshrate3rd);
+		} else {
+			SDE_INFO("dsi_displays[%d]  set partition refreshrate [%d  %d  %d  %d  %d] success\n",
+				i, prr_info.refreshrate1st, prr_info.boundaryLine1st, prr_info.refreshrate2nd, prr_info.boundaryLine2nd, prr_info.refreshrate3rd);
+		}
+	}
+
+	return rc;
+}
+
 static int _sde_kms_null_commit(struct drm_device *dev,
 		struct drm_encoder *enc)
 {
@@ -4711,6 +4743,7 @@ static const struct msm_kms_funcs kms_funcs = {
 	.in_trusted_vm = sde_kms_in_trusted_vm,
 	.in_loopback_mode = sde_kms_in_loopback_mode,
 	.set_panel_feature = sde_kms_set_panel_feature,
+	.set_partition_refreshrate = sde_kms_set_partition_refreshrate,
 };
 
 static int _sde_kms_mmu_destroy(struct sde_kms *sde_kms)

@@ -611,6 +611,8 @@ int dsi_post_clkoff_cb(void *priv, enum dsi_clk_type clk_type,
 
 int dsi_display_set_param(void *display, struct msm_param_info *param_info);
 
+int dsi_display_set_partition_refreshrate(void *display, struct sde_partition_refreshrate* prr_info);
+
 /**
  * dsi_post_clkon_cb() - Callback after clock is turned on
  * @priv: private data pointer.
