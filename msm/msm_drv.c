@@ -2015,6 +2015,38 @@ fail:
 	return ret;
 }
 
+static int msm_ioctl_set_partition_refreshrate(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct msm_drm_private *priv;
+	struct msm_kms *kms;
+	struct sde_partition_refreshrate *prr_info = data;
+	int ret;
+
+	priv = dev->dev_private;
+	kms = priv->kms;
+
+	if (unlikely(!prr_info)) {
+		DRM_ERROR("ioctl_partition_refreshrate invalid data\n");
+		return -EINVAL;
+	}
+
+	DRM_INFO("ioctl_set_partition_refreshrate [%d  %d  %d  %d  %d]\n",
+		prr_info->refreshrate1st, prr_info->boundaryLine1st, prr_info->refreshrate2nd, prr_info->boundaryLine2nd, prr_info->refreshrate3rd);
+
+	if (kms && kms->funcs && kms->funcs->set_partition_refreshrate) {
+		ret = kms->funcs->set_partition_refreshrate(kms, *prr_info);
+		if (ret) {
+			DRM_ERROR("kms set_partition_refreshrate failed.\n");
+			goto fail;
+		}
+	}
+
+	return 0;
+fail:
+	return ret;
+}
+
 /**
  * msm_ioctl_display_early_ept - early wakeup display.
  * @dev: drm device for the ioctl
@@ -2066,6 +2098,8 @@ static const struct drm_ioctl_desc msm_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(MSM_EARLY_EPT, msm_ioctl_display_early_ept,
 			DRM_UNLOCKED),
 	DRM_IOCTL_DEF_DRV(SET_PANEL_FEATURE, msm_ioctl_set_panel_feature,
+			DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(SET_PARTITION_REFRESHRATE, msm_ioctl_set_partition_refreshrate,
 			DRM_UNLOCKED),
 };
 

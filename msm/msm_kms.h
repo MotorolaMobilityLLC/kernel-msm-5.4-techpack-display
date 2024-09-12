@@ -151,6 +151,9 @@ struct msm_kms_funcs {
 	/* set panel feature */
 	int (*set_panel_feature)(const struct msm_kms *kms,
 			struct panel_param_info param_info);
+	/* set panel feature */
+	int (*set_partition_refreshrate)(const struct msm_kms *kms,
+			struct sde_partition_refreshrate prr_info);
 };
 
 struct msm_kms {

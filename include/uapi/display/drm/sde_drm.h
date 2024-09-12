@@ -1133,6 +1133,25 @@ struct panel_param_info {
 #define DRM_GET_PANEL_FEATURE	(DRM_COMMAND_END-2)
 #define DRM_IOCTL_GET_PANEL_FEATURE          DRM_IOWR(DRM_GET_PANEL_FEATURE, struct panel_param_info)
 
+struct sde_partition_refreshrate {
+     /** The refresh rate of the first refreshrate partition */
+    __u32 refreshrate1st;
+     /** The boundary line number between the first partition and the second partition */
+    __u32 boundaryLine1st;
+     /** The refresh rate of the second refreshrate partition */
+    __u32 refreshrate2nd;
+     /** The boundary line number between the second partition and the third partition */
+    __u32 boundaryLine2nd;
+     /** The refresh rate of the third refreshrate partition */
+    __u32 refreshrate3rd;
+     /** Reserved data */
+    __u32 reserved;
+};
+#define DRM_SET_PARTITION_REFRESHRATE	(DRM_COMMAND_END -3)
+#define DRM_IOCTL_SET_PARTITION_REFRESHRATE          DRM_IOWR(DRM_SET_PARTITION_REFRESHRATE, struct sde_partition_refreshrate)
+#define DRM_GET_PARTITION_REFRESHRATE	(DRM_COMMAND_END-4)
+#define DRM_IOCTL_GET_PARTITION_REFRESHRATE          DRM_IOWR(DRM_GET_PARTITION_REFRESHRATE, struct sde_partition_refreshrate)
+
 #if defined(__cplusplus)
 }
 #endif
