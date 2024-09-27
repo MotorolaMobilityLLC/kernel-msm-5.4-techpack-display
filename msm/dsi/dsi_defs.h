@@ -322,6 +322,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_APL_OFF:               apl off
  * @DSI_CMD_SET_PANEL_PCD_ENABLE:               Panel pcd check enable
  * @DSI_CMD_SET_PANEL_PCD_DISABLE:               Panel pcd check disable
+ * @DSI_CMD_SET_PANEL_PRR_ENABLE,                partition refreshrate ON
+ * @	DSI_CMD_SET_PANEL_PRR_DISABLE,              partition refreshrate OFF
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -392,6 +394,8 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_APL_OFF,
 	DSI_CMD_SET_PANEL_PCD_ENABLE,
 	DSI_CMD_SET_PANEL_PCD_DISABLE,
+	DSI_CMD_SET_PANEL_PRR_ENABLE,
+	DSI_CMD_SET_PANEL_PRR_DISABLE,
 	DSI_CMD_SET_MAX
 };
 
