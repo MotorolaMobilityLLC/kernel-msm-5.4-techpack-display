@@ -68,7 +68,8 @@ enum dsi_display_mode_group_flag {
         RRGSFlag_Partition_Refreshrate  = 1 << 5,   // Only can be selected when use partition refreshrate
         RRGSFlag_Partition_Refreshrate_LP = 1 << 6,   // Only can be selected when use low power partition refreshrate
 };
-
+#define PARTITION_REFRESHRATE 121
+#define PARTITION_REFRESHRATE_LP 161
 static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
 {
 	if (timing->refresh_rate_group_flag & RRGSFlag_Special_Idle_1Hz)
@@ -84,6 +85,19 @@ static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
 }
 // END Motorola zhanggb, IKSWT-18219
 
+static inline u32 dsi_display_prr_refreshrate_reg(int refreshrate)
+{
+	if (refreshrate == 10)
+		return 0x0B;
+	else if (refreshrate == 30)
+		return 0x03;
+	else if (refreshrate == 60)
+		return 0x01;
+	else if (refreshrate == 120)
+		return 0x00;
+	else
+		return 0x00;
+}
 bool dsi_panel_is_gsi_mode(void);
 
 #endif /* _DSI_DISPLAY_MOT_EXT_H_ */

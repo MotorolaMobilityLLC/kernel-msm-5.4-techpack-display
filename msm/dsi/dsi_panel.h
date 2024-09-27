@@ -284,6 +284,14 @@ struct dsi_panel_lhbm_config {
 	u32 	bl_num;
 };
 
+struct dsi_panel_PartitionRefreshrate_config {
+	bool enable;
+	u32 slice_h;
+	u32 min_boundaryLine;
+	u32 max_boundaryLine;
+	u32 boundaryLine_reg_count;
+};
+
 struct dsi_panel_apl_config {
 	bool enable;
 	u32 apl_threshold;
@@ -420,6 +428,8 @@ struct dsi_panel {
 	struct drm_panel_cellid_config cellid_config;
 
 	struct dsi_panel_apl_config apl_config;
+
+	struct dsi_panel_PartitionRefreshrate_config prr_config;
 
 	struct dsi_parser_utils utils;
 
