@@ -9984,6 +9984,7 @@ static int dsi_display_set_roi(struct dsi_display *display,
 
 		if (!changed)
 			continue;
+		DSI_INFO("partial_update: dsi_ctrl_set_roi changed: %d\n", changed);
 
 		/* re-program the ctrl with the timing based on the new roi */
 		rc = dsi_ctrl_timing_setup(ctrl->ctrl);
