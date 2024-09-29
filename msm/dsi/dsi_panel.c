@@ -4966,7 +4966,7 @@ static int dsi_panel_parse_roi_alignment(struct dsi_parser_utils *utils,
 			align->min_height = value[5];
 		}
 
-		DSI_INFO("roi alignment: [%d, %d, %d, %d, %d, %d]\n",
+		DSI_INFO("partial_update: roi alignment: [%d, %d, %d, %d, %d, %d]\n",
 			align->xstart_pix_align,
 			align->width_pix_align,
 			align->ystart_pix_align,
@@ -7051,6 +7051,8 @@ static int dsi_panel_roi_prepare_dcs_cmds(struct dsi_panel_cmd_set *set,
 	paset[2] = roi->y & 0xFF;
 	paset[3] = ((roi->y - 1 + roi->h) & 0xFF00) >> 8;
 	paset[4] = (roi->y - 1 + roi->h) & 0xFF;
+	DSI_INFO("partial_update: caset: %2X, %2X, %2X, %2X, %2X\n",caset[0], caset[1], caset[2], caset[3], caset[4]);
+	DSI_INFO("partial_update: paset: %2X, %2X, %2X, %2X, %2X\n",paset[0], paset[1], paset[2], paset[3], paset[4]);
 
 	set->type = DSI_CMD_SET_ROI;
 	set->state = DSI_CMD_SET_STATE_LP;
@@ -7231,7 +7233,7 @@ int dsi_panel_send_roi_dcs(struct dsi_panel *panel, int ctrl_idx,
 				panel->name, rc);
 		return rc;
 	}
-	DSI_DEBUG("[%s] send roi x %d y %d w %d h %d\n", panel->name,
+	DSI_INFO("partial_update:[%s] send roi x %d y %d w %d h %d\n", panel->name,
 			roi->x, roi->y, roi->w, roi->h);
 	SDE_EVT32(roi->x, roi->y, roi->w, roi->h);
 
