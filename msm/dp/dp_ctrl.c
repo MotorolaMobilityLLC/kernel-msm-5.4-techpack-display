@@ -739,7 +739,7 @@ static void dp_ctrl_select_training_pattern(struct dp_ctrl_private *ctrl,
 end:
 	ctrl->training_2_pattern = pattern;
 }
-/*
+
 static int dp_ctrl_set_usb_redriver_eq(struct dp_ctrl_private *ctrl)
 {
 	struct device_node *np;
@@ -773,7 +773,7 @@ static int dp_ctrl_set_usb_redriver_eq(struct dp_ctrl_private *ctrl)
 
 	return 0;
 }
-*/
+
 static bool is_allow_downgrade(u8 *monitor_name, int type_index)
 {
 	char *hub_monitor_blacklist[] = {"LEN T34w-20","LG Ultra HD",NULL};
@@ -808,8 +808,7 @@ static int update_redriver_seq(struct dp_ctrl_private *ctrl)
 		ctrl->link->link_params.lane_count == 2 &&
 		ctrl->link->phy_params.v_level == 0 &&
 		ctrl->link->phy_params.p_level == 0) {
-/*MMI_STOPSHIP <msm/dp>: temp remove for rebase build pass*/
-			//dp_ctrl_set_usb_redriver_eq(ctrl);
+			dp_ctrl_set_usb_redriver_eq(ctrl);
 	}
 
 	return 0;
