@@ -1100,8 +1100,9 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 
 	panel = dsi_display->panel;
 
-	if(dsi_display->display_idx == 1 && !panel->esd_first_check){
-		DSI_INFO("cli panel ignore esd check\n");
+	if(!panel->esd_first_check){
+		DSI_INFO("panel ignore esd check panel->esd_first_check = %d dsi_display->display_idx = %d\n",
+			panel->esd_first_check, dsi_display->display_idx);
 		panel->esd_first_check = true;
 		return true;
 	}
