@@ -7213,7 +7213,7 @@ int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
 	DSI_INFO("%s: timing.refresh_rate = %d \n", __func__,timing.refresh_rate);
 
 	if(panel->prr_config.enable && dsi_display_mode_actual_rr(&timing) == PARTITION_REFRESHRATE){
-	    if(panel->cur_partition_refreshrate.boundaryLine1st == 0){
+	    if(panel->cur_partition_refreshrate.reserved == 0){
 	        rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PRR_DISABLE, false);
 	        if (rc)
                    DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_DISABLE cmds, rc=%d\n",
