@@ -670,6 +670,7 @@ enum {
 	SDE_CTL_HW_FENCE_DIR_WRITE,
 	SDE_CTL_NO_LAYER_EXT,
 	SDE_CTL_CESTA_FLUSH,
+	SDE_CTL_HYP_CTL_RESERVE,
 	SDE_CTL_REG_DMA,
 	SDE_CTL_MAX
 };
@@ -1492,6 +1493,15 @@ struct sde_ctl_cfg {
 	SDE_HW_BLK_INFO;
 };
 
+/* struct sde_ctl_hyp_cfg : MDP HYP CTL block
+ * @id:                index identifying this block
+ * @base:              register base offset to mdss
+ * @features           bit mask identifying sub-blocks/features
+ */
+struct sde_ctl_hyp_cfg {
+	SDE_HW_BLK_INFO;
+};
+
 /**
  * struct sde_sspp_cfg - information of source pipes
  * @id:                index identifying this block
@@ -2023,6 +2033,7 @@ struct sde_perf_cfg {
  * @mdss_hw_block_size  max offset of MDSS_HW block (0 offset), used for debug
  * @mdp_count           number of valid MDP HW blocks
  * @mdp                 array of pointers to MDP HW blocks
+ * @ctl_hyp             resource reservation block for ctl path VM
  * @ctl_count           number of valid CTL blocks available
  * @ctl                 array of pointers to CTL blocks
  * @sspp_count          number of valid SSPP blocks available
@@ -2151,6 +2162,7 @@ struct sde_mdss_cfg {
 	struct sde_mdp_cfg mdp[MAX_BLOCKS];
 	u32 ctl_count;
 	struct sde_ctl_cfg ctl[MAX_BLOCKS];
+	struct sde_ctl_hyp_cfg ctl_hyp;
 	u32 sspp_count;
 	struct sde_sspp_cfg sspp[MAX_BLOCKS];
 	u32 mixer_count;
