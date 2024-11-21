@@ -1267,7 +1267,14 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 						}
 						alpha = lhbm_config->alpha[hbm_bl_lvl];
 
-						if(hbm_bl_lvl > lhbm_config->dc_hybird_threshold){
+						if((lhbm_config->hbm_threshold != 0) && (hbm_bl_lvl > lhbm_config->hbm_threshold)) {
+							payload[1] = (alpha&0xff00)>>8;
+							payload[2] = alpha&0xff;
+							payload[3] = (lhbm_config->max_hbm_value & 0xff00) >> 8;
+							payload[4] = lhbm_config->max_hbm_value & 0xff;
+							DSI_INFO("%s: alpha [%x]=%x%x%x%x  alpha_level = %d backlight level=%d\n ",
+								__func__, payload[0], payload[1], payload[2], payload[3], payload[4],hbm_bl_lvl,lhbm_config->dbv_level);
+						}else if(hbm_bl_lvl > lhbm_config->dc_hybird_threshold){
 							payload[1] = 0x10;
 							payload[2] = 0x00;
 							payload[3] = (lhbm_config->dbv_level & 0xff00) >> 8;
@@ -4716,6 +4723,21 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 			lhbm_config->ddic_type = 0;
 		}
 
+		rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-panel-local-hbm-max-hbm-value",
+			&(lhbm_config->max_hbm_value));
+		if (rc) {
+			DSI_ERR("%s:qcom,mdss-dsi-panel-local-hbm-max-hbm-value is not defined, set it to 0\n", __func__);
+			lhbm_config->max_hbm_value = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-panel-local-hbm-THRESHOLD-BL",
+			&(lhbm_config->hbm_threshold));
+		if (rc) {
+			DSI_ERR("%s:qcom,mdss-dsi-panel-local-hbm-THRESHOLD-BL is not defined, set it to 0\n", __func__);
+			lhbm_config->hbm_threshold = 0;
+		}
 
 		lhbm_config->lhbm_wait_for_fps_valid = utils->read_bool(utils->data,
 			"qcom,mdss-dsi-panel-lhbm-wait-fps-valid");
