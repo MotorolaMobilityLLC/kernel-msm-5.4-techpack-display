@@ -262,6 +262,8 @@ struct dsi_panel_spr_info {
 struct dsi_panel_lhbm_config {
 	bool enable;
 	u32 dc_hybird_threshold;
+	u32 hbm_threshold;
+	u32 max_hbm_value;
 	u32 dbv_level;
 	u32 alpha_reg;
 	u32 alpha_size;
