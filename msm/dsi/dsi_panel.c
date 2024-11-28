@@ -7864,8 +7864,8 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 				payload[3] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1)* panel->prr_config.slice_h) >> 0x08;
 				payload[4] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1) * panel->prr_config.slice_h) & 0xFF;
 			}else{
-				payload[3] = 0xBA;
-				payload[4] = 0x00;
+				payload[3] = 0x0B;
+				payload[4] = 0xB0;
 			}
 
 		}
