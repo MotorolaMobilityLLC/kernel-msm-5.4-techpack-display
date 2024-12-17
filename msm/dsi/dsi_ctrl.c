@@ -3616,11 +3616,11 @@ int dsi_ctrl_cmd_transfer(struct dsi_ctrl *dsi_ctrl, struct dsi_cmd_desc *cmd,
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmd->msg.tx_buf;
 			for (i = 0; i < cmd->msg.tx_len; i++) {
-				snprintf(dbgcmd, 4, " %2x", pcmddata[i]);
+				snprintf(dbgcmd, 4, " %02X", pcmddata[i]);
 				strcat(dbgcmds, dbgcmd);
 			}
 			printk("%s: dsi_ctrl_cmd_transfer len=%zd, type=0x%x %s cmds=%s\n",
-				   dsi_ctrl->name, cmd->msg.tx_len, cmd->msg.type, (cmd->msg.flags & MIPI_DSI_MSG_USE_LPM) ? "hs" : "lp", dbgcmds);
+				   dsi_ctrl->name, cmd->msg.tx_len, cmd->msg.type, (cmd->msg.flags & MIPI_DSI_MSG_USE_LPM) ? "lp" : "hs", dbgcmds);
 			kfree(dbgcmds);
 	           }
 		}
