@@ -7112,8 +7112,8 @@ static int dsi_panel_roi_prepare_dcs_cmds(struct dsi_panel_cmd_set *set,
 	paset[2] = roi->y & 0xFF;
 	paset[3] = ((roi->y - 1 + roi->h) & 0xFF00) >> 8;
 	paset[4] = (roi->y - 1 + roi->h) & 0xFF;
-	DSI_INFO("partial_update: caset: %2X, %2X, %2X, %2X, %2X\n",caset[0], caset[1], caset[2], caset[3], caset[4]);
-	DSI_INFO("partial_update: paset: %2X, %2X, %2X, %2X, %2X\n",paset[0], paset[1], paset[2], paset[3], paset[4]);
+	//DSI_INFO("partial_update: caset: %2X, %2X, %2X, %2X, %2X\n",caset[0], caset[1], caset[2], caset[3], caset[4]);
+	//DSI_INFO("partial_update: paset: %2X, %2X, %2X, %2X, %2X\n",paset[0], paset[1], paset[2], paset[3], paset[4]);
 
 	set->type = DSI_CMD_SET_ROI;
 	set->state = DSI_CMD_SET_STATE_LP;
