@@ -1299,6 +1299,7 @@ static void sde_encoder_phys_vid_prepare_for_commit(
 	}
 }
 
+bool debug_flag = false;
 static void sde_encoder_phys_vid_irq_control(struct sde_encoder_phys *phys_enc,
 		bool enable)
 {
@@ -1318,10 +1319,13 @@ static void sde_encoder_phys_vid_irq_control(struct sde_encoder_phys *phys_enc,
 		if (ret)
 			return;
 
-		sde_encoder_helper_register_irq(phys_enc, INTR_IDX_UNDERRUN);
+		if (!debug_flag) {
+			sde_encoder_helper_register_irq(phys_enc, INTR_IDX_UNDERRUN);
+			 debug_flag = true;
+		}
 	} else {
 		sde_encoder_phys_vid_control_vblank_irq(phys_enc, false);
-		sde_encoder_helper_unregister_irq(phys_enc, INTR_IDX_UNDERRUN);
+		//sde_encoder_helper_unregister_irq(phys_enc, INTR_IDX_UNDERRUN);
 	}
 }
 
