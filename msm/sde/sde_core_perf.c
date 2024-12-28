@@ -757,7 +757,7 @@ static void _sde_core_perf_crtc_update_bus(struct sde_kms *kms,
 	bus_ab_quota = min(bus_ab_quota,
 			kms->catalog->perf.max_bw_high*1000ULL);
 
-	if (bus_ab_quota >= 4500000000ULL) {
+	if (bus_ab_quota >= 3000000000ULL) {
 		bus_ab_quota = max(bus_ab_quota, kms->catalog->perf.max_bw_high*1000ULL);
 		SDE_ERROR("change BW to Max value");
 	}
