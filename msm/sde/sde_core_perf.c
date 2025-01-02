@@ -199,8 +199,6 @@ int sde_core_perf_crtc_check(struct drm_crtc *crtc,
 	struct sde_kms *kms;
 	u64 current_clk_rate, new_clk_rate;
 	int i, ret;
-	static u32 old_bw = 0;
-	static u32 old_threshold = 0;
 
 	if (!crtc || !state) {
 		SDE_ERROR("invalid crtc\n");
@@ -265,17 +263,11 @@ int sde_core_perf_crtc_check(struct drm_crtc *crtc,
 
 		/* convert bandwidth to kb */
 		bw = DIV_ROUND_UP_ULL(bw_sum_of_intfs, 1000);
-		if (bw != old_bw) {
-			SDE_ERROR("calculated bandwidth=%uk\n", bw);
-			old_bw = bw;
-		}
+		SDE_ERROR("calculated bandwidth=%uk\n", bw);
 
 		threshold = kms->catalog->perf.max_bw_high;
 
-		if (threshold != old_threshold) {
-			SDE_ERROR("final threshold bw limit = %d\n", threshold);
-			old_threshold = threshold;
-		}
+		SDE_ERROR("final threshold bw limit = %d\n", threshold);
 
 		if (!sde_cstate->bw_control) {
 			SDE_DEBUG("bypass bandwidth check\n");
@@ -1047,7 +1039,6 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 	int ret, i;
 	struct msm_drm_private *priv;
 	struct sde_kms *kms;
-	static u64 old_clk_rate = 0;
 
 	if (!crtc) {
 		SDE_ERROR("invalid crtc\n");
@@ -1063,11 +1054,8 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 	sde_crtc = to_sde_crtc(crtc);
 	sde_cstate = to_sde_crtc_state(crtc->state);
 
-	if (kms->perf.core_clk_rate != old_clk_rate) {
-		SDE_ERROR("crtc:%d stop_req:%d core_clk:%llu\n",
-				crtc->base.id, stop_req, kms->perf.core_clk_rate);
-		old_clk_rate = kms->perf.core_clk_rate;
-	}
+	SDE_ERROR("crtc:%d stop_req:%d core_clk:%llu\n",
+			crtc->base.id, stop_req, kms->perf.core_clk_rate);
 
 	mutex_lock(&sde_core_perf_lock);
 
