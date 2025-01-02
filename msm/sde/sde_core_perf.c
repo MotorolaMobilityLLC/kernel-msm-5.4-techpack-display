@@ -263,11 +263,11 @@ int sde_core_perf_crtc_check(struct drm_crtc *crtc,
 
 		/* convert bandwidth to kb */
 		bw = DIV_ROUND_UP_ULL(bw_sum_of_intfs, 1000);
-		SDE_ERROR("calculated bandwidth=%uk\n", bw);
+		SDE_DEBUG("calculated bandwidth=%uk\n", bw);
 
 		threshold = kms->catalog->perf.max_bw_high;
 
-		SDE_ERROR("final threshold bw limit = %d\n", threshold);
+		SDE_DEBUG("final threshold bw limit = %d\n", threshold);
 
 		if (!sde_cstate->bw_control) {
 			SDE_DEBUG("bypass bandwidth check\n");
@@ -780,7 +780,7 @@ static void _sde_core_perf_crtc_update_bus(struct sde_kms *kms,
 	case RT_CLIENT:
 		sde_power_data_bus_set_quota(&priv->phandle,
 				bus_id, bus_ab_quota, bus_ib_quota);
-		SDE_ERROR("client:%s bus_id=%d ab=%llu ib=%llu\n", "rt",
+		SDE_DEBUG("client:%s bus_id=%d ab=%llu ib=%llu\n", "rt",
 				bus_id, bus_ab_quota, bus_ib_quota);
 		break;
 
@@ -788,7 +788,7 @@ static void _sde_core_perf_crtc_update_bus(struct sde_kms *kms,
 		sde_cstate = to_sde_crtc_state(crtc->state);
 		sde_rsc_client_vote(sde_cstate->rsc_client,
 				bus_id, bus_ab_quota, bus_ib_quota);
-		SDE_ERROR("client:%s bus_id=%d ab=%llu ib=%llu\n", "rt_rsc",
+		SDE_DEBUG("client:%s bus_id=%d ab=%llu ib=%llu\n", "rt_rsc",
 				bus_id, bus_ab_quota, bus_ib_quota);
 		break;
 
@@ -800,14 +800,12 @@ static void _sde_core_perf_crtc_update_bus(struct sde_kms *kms,
 	if (kms->perf.bw_vote_mode_updated) {
 		switch (kms->perf.bw_vote_mode) {
 		case DISP_RSC_MODE:
-			SDE_ERROR("DISP_RSC_MODE\n");
 			sde_power_data_bus_set_quota(&priv->phandle,
 				bus_id, 0, 0);
 			kms->perf.bw_vote_mode_updated = false;
 			break;
 
 		case APPS_RSC_MODE:
-			SDE_ERROR("APPS_RSC_MODE\n");
 			sde_cstate = to_sde_crtc_state(crtc->state);
 			if (sde_cstate->rsc_client) {
 				sde_rsc_client_vote(sde_cstate->rsc_client,
@@ -965,7 +963,7 @@ static void _sde_core_perf_crtc_update_check(struct drm_crtc *crtc,
 				(!params_changed &&
 				(new->bw_ctl[i] < old->bw_ctl[i]))) {
 
-			SDE_ERROR(
+			SDE_DEBUG(
 				"crtc=%d p=%d new_bw=%llu,old_bw=%llu\n",
 				crtc->base.id, params_changed,
 				new->bw_ctl[i], old->bw_ctl[i]);
@@ -980,7 +978,7 @@ static void _sde_core_perf_crtc_update_check(struct drm_crtc *crtc,
 				(new->max_per_pipe_ib[i] <
 				old->max_per_pipe_ib[i]))) {
 
-			SDE_ERROR(
+			SDE_DEBUG(
 				"crtc=%d p=%d new_ib=%llu,old_ib=%llu\n",
 				crtc->base.id, params_changed,
 				new->max_per_pipe_ib[i],
@@ -1054,7 +1052,7 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 	sde_crtc = to_sde_crtc(crtc);
 	sde_cstate = to_sde_crtc_state(crtc->state);
 
-	SDE_ERROR("crtc:%d stop_req:%d core_clk:%llu\n",
+	SDE_DEBUG("crtc:%d stop_req:%d core_clk:%llu\n",
 			crtc->base.id, stop_req, kms->perf.core_clk_rate);
 
 	mutex_lock(&sde_core_perf_lock);
@@ -1122,7 +1120,7 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 		}
 
 		kms->perf.core_clk_rate = clk_rate;
-		SDE_ERROR("update clk rate = %lld HZ\n", clk_rate);
+		SDE_DEBUG("update clk rate = %lld HZ\n", clk_rate);
 	}
 	mutex_unlock(&sde_core_perf_lock);
 
