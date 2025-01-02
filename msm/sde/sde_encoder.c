@@ -3803,7 +3803,6 @@ static void sde_encoder_underrun_callback(struct drm_encoder *drm_enc,
 	SDE_DBG_CTRL("panic_underrun");
 
 	SDE_ATRACE_END("encoder_underrun_callback");
-	BUG();
 }
 
 void sde_encoder_register_vblank_callback(struct drm_encoder *drm_enc,
