@@ -2568,6 +2568,14 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 		if (rc)
 			goto end;
 		break;
+	case CONNECTOR_PROP_APL:
+		param_info.value = val;
+		param_info.param_idx = PARAM_APL_ID;
+		param_info.param_conn_idx = CONNECTOR_PROP_APL;
+		rc = _sde_connector_update_param(c_conn, &param_info);
+		if (rc)
+			goto end;
+		break;
 	case CONNECTOR_PROP_COLOR:
 		param_info.value = val;
 		param_info.param_idx = PARAM_COLOR_ID;
