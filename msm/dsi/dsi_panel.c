@@ -1190,11 +1190,11 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
 	struct dsi_panel_cmd_set *apl_cmd;
 
 	if (!panel || (bl_lvl > 0xffff) ||!panel->panel_initialized) {
-		DSI_DEBUG("dsi_panel_set_apl invalid params\n");
+		DSI_ERR("invalid params\n");
 		return -EINVAL;
 	}
 
-	if(bl_lvl > panel->apl_config.apl_threshold && !panel->apl_config.apl_state && panel->apl_config.apl_dolbyenable){
+	if(bl_lvl > panel->apl_config.apl_threshold && !panel->apl_config.apl_state){
 		apl_cmd = &panel->apl_config.apl_cmd_on;
 		rc = dsi_panel_tx_send_mot_cmd(panel, apl_cmd);
 		panel->apl_config.apl_state = true;
@@ -1209,7 +1209,7 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
                       panel->apl_config.apl_threshold,panel->apl_config.apl_state,bl_lvl);
 	}
 	if (rc)
-		DSI_INFO("[%s] failed to send DSI_CMD_SET_APL cmd, rc=%d\n",
+		DSI_ERR("[%s] failed to send DSI_CMD_SET_APL cmd, rc=%d\n",
 		       panel->name, rc);
 
 	return rc;
@@ -1711,17 +1711,6 @@ static int dsi_panel_set_color(struct dsi_panel *panel,
 
         return rc;
 };
-
-static int dsi_panel_set_dolbyapl(struct dsi_panel *panel,
-                        struct msm_param_info *param_info)
-{
-	int rc = 0;
-	pr_info("Set doby APL to (%d)\n", param_info->value);
-	panel->apl_config.apl_dolbyenable = param_info->value;
-
-        return rc;
-};
-
 int dsi_panel_set_param(struct dsi_panel *panel,
 				struct msm_param_info *param_info)
 {
@@ -1746,9 +1735,6 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 			break;
 		case PARAM_DC_ID :
 			rc = dsi_panel_set_dc(panel, param_info);
-			break;
-		case PARAM_APL_ID :
-			dsi_panel_set_dolbyapl(panel, param_info);
 			break;
 		case PARAM_COLOR_ID :
 			dsi_panel_set_color(panel, param_info);
@@ -5733,8 +5719,6 @@ static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 		goto error;
 	}
 	apl_config->apl_state = false;
-
-       apl_config->apl_dolbyenable = true;
 
 	return 0;
 error:
