@@ -4884,6 +4884,36 @@ static int sde_kms_set_partition_refreshrate(const struct msm_kms *kms,
 	return rc;
 }
 
+static int sde_kms_set_moto_drm_command(const struct msm_kms *kms,
+		struct sde_moto_drm_command mot_cmd)
+{
+	struct sde_kms *sde_kms;
+	struct dsi_display *display;
+	int rc = 0;
+	int i = 0;
+
+	if (!kms) {
+		SDE_ERROR("invalid input args\n");
+		return -EINVAL;
+	}
+
+	sde_kms = to_sde_kms(kms);
+	for (i = 0; i < sde_kms->dsi_display_count; i++) {
+		display = (struct dsi_display *)sde_kms->dsi_displays[i];
+		if(!display->panel->panel_send_cmd) {
+			continue;
+		}
+		rc = dsi_display_set_moto_drm_command(display, &mot_cmd);
+		if (rc) {
+			SDE_ERROR("dsi_displays[%d] set mot drm command [%d  %d] failed\n", i, mot_cmd.id, mot_cmd.val);
+		} else {
+			SDE_INFO("dsi_displays[%d]  set mot drm command [%d  %d] success\n", i, mot_cmd.id, mot_cmd.val);
+		}
+	}
+
+	return rc;
+}
+
 static int _sde_kms_null_commit(struct drm_device *dev,
 		struct drm_encoder *enc)
 {
@@ -5440,6 +5470,7 @@ static const struct msm_kms_funcs kms_funcs = {
 	.in_loopback_mode = sde_kms_in_loopback_mode,
 	.set_panel_feature = sde_kms_set_panel_feature,
 	.set_partition_refreshrate = sde_kms_set_partition_refreshrate,
+	.set_moto_drm_command  = sde_kms_set_moto_drm_command,
 };
 
 static int _sde_kms_mmu_destroy(struct sde_kms *sde_kms)

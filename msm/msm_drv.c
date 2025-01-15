@@ -2047,6 +2047,37 @@ fail:
 	return ret;
 }
 
+static int msm_ioctl_set_moto_drm_command(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct msm_drm_private *priv;
+	struct msm_kms *kms;
+	struct sde_moto_drm_command *mot_cmd = data;
+	int ret;
+
+	priv = dev->dev_private;
+	kms = priv->kms;
+
+	if (unlikely(!mot_cmd)) {
+		DRM_ERROR("msm_ioctl_set_moto_drm_command invalid data\n");
+		return -EINVAL;
+	}
+
+	DRM_INFO("ioctl_set_moto_drm_command %d  %d\n", mot_cmd->id, mot_cmd->val);
+
+	if (kms && kms->funcs && kms->funcs->set_moto_drm_command) {
+		ret = kms->funcs->set_moto_drm_command(kms, *mot_cmd);
+		if (ret) {
+			DRM_ERROR("kms set_moto_drm_command failed.\n");
+			goto fail;
+		}
+	}
+
+	return 0;
+fail:
+	return ret;
+}
+
 /**
  * msm_ioctl_display_early_ept - early wakeup display.
  * @dev: drm device for the ioctl
@@ -2100,6 +2131,8 @@ static const struct drm_ioctl_desc msm_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(SET_PANEL_FEATURE, msm_ioctl_set_panel_feature,
 			DRM_UNLOCKED),
 	DRM_IOCTL_DEF_DRV(SET_PARTITION_REFRESHRATE, msm_ioctl_set_partition_refreshrate,
+			DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(SET_MOTO_DRM_COMMAND, msm_ioctl_set_moto_drm_command,
 			DRM_UNLOCKED),
 };
 

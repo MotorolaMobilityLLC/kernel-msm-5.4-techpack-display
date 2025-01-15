@@ -368,6 +368,28 @@ int dsi_display_set_partition_refreshrate(void *display, struct sde_partition_re
 	return rc;
 }
 
+int dsi_display_set_moto_drm_command(void *display, struct sde_moto_drm_command* mot_cmd)
+{
+	struct dsi_display *dsi_display = display;
+	struct dsi_panel *panel;
+	int rc = 0;
+
+	if (dsi_display == NULL || dsi_display->panel == NULL)
+		return -EINVAL;
+
+	panel = dsi_display->panel;
+
+	DSI_DEBUG("%s+\n", __func__);
+	if (!dsi_panel_initialized(panel))
+		return -EINVAL;
+
+	rc = dsi_panel_set_moto_drm_command(panel, mot_cmd);
+	if (rc)
+		DSI_ERR("[%s] failed to panel to set moto drm command. rc=%d\n",
+				dsi_display->name, rc);
+	return rc;
+}
+
 static int dsi_display_cmd_engine_enable(struct dsi_display *display)
 {
 	int rc = 0;

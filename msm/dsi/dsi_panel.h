@@ -672,6 +672,9 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
 				struct sde_partition_refreshrate *prr_info);
 
+int dsi_panel_set_moto_drm_command(struct dsi_panel *panel,
+				struct sde_moto_drm_command* mot_cmd);
+
 void dsi_panel_reset_param(struct dsi_panel *panel);
 
 int dsi_panel_get_elvss_data(struct dsi_panel *panel);
