@@ -1183,6 +1183,19 @@ struct sde_partition_refreshrate {
 #define DRM_GET_PARTITION_REFRESHRATE	(DRM_COMMAND_END-4)
 #define DRM_IOCTL_GET_PARTITION_REFRESHRATE          DRM_IOWR(DRM_GET_PARTITION_REFRESHRATE, struct sde_partition_refreshrate)
 
+/* Moto defined command intf*/
+typedef enum {
+	MOT_CMD_APL = 0,
+	MOT_CMD_MAX_NUM
+} motoCmd_t;
+struct sde_moto_drm_command {
+     /** The command id to set to driver */
+    __u32 id;
+     /** The value of command */
+    __u32 val;
+};
+#define DRM_IOCTL_SET_MOTO_DRM_COMMAND DRM_IOW((DRM_COMMAND_END -5), struct sde_moto_drm_command)
+
 #if defined(__cplusplus)
 }
 #endif
