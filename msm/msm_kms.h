@@ -156,6 +156,9 @@ struct msm_kms_funcs {
 	/* set panel feature */
 	int (*set_partition_refreshrate)(const struct msm_kms *kms,
 			struct sde_partition_refreshrate prr_info);
+	/* set moto drm command, a common interface to call from hal to driver */
+	int (*set_moto_drm_command)(const struct msm_kms *kms,
+			struct sde_moto_drm_command mot_cmd);
 };
 
 struct msm_kms {
