@@ -7202,6 +7202,7 @@ int dsi_panel_switch(struct dsi_panel *panel)
 
 	return rc;
 }
+
 int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
 				struct sde_partition_refreshrate *prr_info)
 {
@@ -7243,6 +7244,19 @@ int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
                panel->apl_config.dobly_enable = mot_cmd->val;
 	        DSI_INFO("Update apl_config.dobly_enable = %d\n",panel->apl_config.dobly_enable);
 	}
+
+	return rc;
+}
+
+int dsi_panel_set_moto_drm_command(struct dsi_panel *panel,
+				struct sde_moto_drm_command* mot_cmd)
+{
+	int rc = 0;
+	if (!panel || !mot_cmd) {
+                DSI_ERR("invalid params\n");
+                return -EINVAL;
+        }
+	DSI_INFO("%s: %d %d\n", __func__, mot_cmd->id, mot_cmd->val);
 
 	return rc;
 }
