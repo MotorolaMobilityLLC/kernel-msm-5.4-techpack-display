@@ -1076,11 +1076,11 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
 	struct dsi_panel_cmd_set *apl_cmd;
 
 	if (!panel || (bl_lvl > 0xffff) ||!panel->panel_initialized) {
-		DSI_ERR("invalid params\n");
+		DSI_DEBUG("invalid params\n");
 		return -EINVAL;
 	}
 
-	if(bl_lvl > panel->apl_config.apl_threshold && !panel->apl_config.apl_state){
+	if(bl_lvl > panel->apl_config.apl_threshold && !panel->apl_config.apl_state && panel->apl_config.dobly_enable == 0){
 		apl_cmd = &panel->apl_config.apl_cmd_on;
 		rc = dsi_panel_tx_send_mot_cmd(panel, apl_cmd);
 		panel->apl_config.apl_state = true;
@@ -1095,7 +1095,7 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
                       panel->apl_config.apl_threshold,panel->apl_config.apl_state,bl_lvl);
 	}
 	if (rc)
-		DSI_ERR("[%s] failed to send DSI_CMD_SET_APL cmd, rc=%d\n",
+		DSI_INFO("[%s] failed to send DSI_CMD_SET_APL cmd, rc=%d\n",
 		       panel->name, rc);
 
 	return rc;
@@ -5250,6 +5250,15 @@ static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 		goto error;
 	}
 
+	rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-panel-APL-FUNC-ID",
+			&(apl_config->apl_funcid));
+	if (rc) {
+		DSI_ERR("%s:qcom,mdss-dsi-panel-APL-FUNC-ID is not defined, set it to 0\n", __func__);
+		apl_config->apl_funcid = 0;
+		goto error;
+	}
+
 	dsi_panel_parse_cmd_sets_sub(&apl_config->apl_cmd_on,
 				DSI_CMD_SET_APL_ON, utils);
 	if (!apl_config->apl_cmd_on.count) {
@@ -5266,6 +5275,7 @@ static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 		goto error;
 	}
 	apl_config->apl_state = false;
+	apl_config->dobly_enable = 0;
 
 	return 0;
 error:
@@ -7227,6 +7237,12 @@ int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
 	        }
           }
 	mutex_unlock(&panel->panel_lock);
+
+       //Add dobly apl enable/display
+       if(mot_cmd->id == panel->apl_config.apl_funcid){
+               panel->apl_config.dobly_enable = mot_cmd->val;
+	        DSI_INFO("Update apl_config.dobly_enable = %d\n",panel->apl_config.dobly_enable);
+	}
 
 	return rc;
 }
