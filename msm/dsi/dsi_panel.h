@@ -299,6 +299,8 @@ struct dsi_panel_apl_config {
 	struct dsi_panel_cmd_set apl_cmd_on;
 	struct dsi_panel_cmd_set apl_cmd_off;
 	bool apl_state;
+	int apl_funcid;
+	int dobly_enable;
 };
 
 enum panel_idx {
