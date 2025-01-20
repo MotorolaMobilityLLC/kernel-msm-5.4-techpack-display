@@ -7983,12 +7983,6 @@ int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
           }
 	mutex_unlock(&panel->panel_lock);
 
-       //Add dobly apl enable/display
-       if(mot_cmd->id == panel->apl_config.apl_funcid){
-               panel->apl_config.dobly_enable = mot_cmd->val;
-	        DSI_INFO("Update apl_config.dobly_enable = %d\n",panel->apl_config.dobly_enable);
-	}
-
 	return rc;
 }
 
@@ -8001,6 +7995,11 @@ int dsi_panel_set_moto_drm_command(struct dsi_panel *panel,
                 return -EINVAL;
         }
 	DSI_INFO("%s: %d %d\n", __func__, mot_cmd->id, mot_cmd->val);
+       //Add dobly apl enable/display
+       if(mot_cmd->id == panel->apl_config.apl_funcid){
+               panel->apl_config.dobly_enable = mot_cmd->val;
+	        DSI_INFO("Update apl_config.dobly_enable = %d\n",panel->apl_config.dobly_enable);
+	}
 
 	return rc;
 }
