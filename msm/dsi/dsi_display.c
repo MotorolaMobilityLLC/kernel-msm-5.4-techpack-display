@@ -1899,6 +1899,7 @@ int dsi_display_set_power(struct drm_connector *connector,
 
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
+		DSI_INFO("Enter display power LP1 mode\n");
 		if (display->panel->power_mode == SDE_MODE_DPMS_LP2) {
 			if (dsi_display_set_lp2_load(display, false))
 				DSI_WARN("Failed to remove load of lp2 state\n");
@@ -1907,12 +1908,14 @@ int dsi_display_set_power(struct drm_connector *connector,
 		rc = dsi_panel_set_lp1(display->panel);
 		break;
 	case SDE_MODE_DPMS_LP2:
+		DSI_INFO("Enter display power LP2 mode\n");
 		rc = dsi_panel_set_lp2(display->panel);
 		if (dsi_display_set_lp2_load(display, true))
 			DSI_WARN("Failed to set load for lp2 state\n");
 
 		break;
 	case SDE_MODE_DPMS_ON:
+		DSI_INFO("Enter display power Nolp mode\n");
 		if (display->panel->power_mode == SDE_MODE_DPMS_LP2) {
 			if (dsi_display_set_lp2_load(display, false))
 				DSI_WARN("Failed to remove load of lp2 state\n");
