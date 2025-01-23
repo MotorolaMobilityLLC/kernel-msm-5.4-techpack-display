@@ -689,7 +689,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
-	       if (panel->prr_config.enable && (type == DSI_CMD_SET_TIMING_SWITCH || type == DSI_CMD_SET_PANEL_PRR_ENABLE)) {
+	       if (panel->prr_config.enable && (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_NOLP )) {
 	           dbgcmds = kzalloc(cmds->msg.tx_len * 4 + 1, GFP_KERNEL);
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmds->msg.tx_buf;
@@ -6688,6 +6688,7 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 		dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 			"ibb", REGULATOR_MODE_NORMAL);
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP, false);
+
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 		       panel->name, rc);
@@ -6939,7 +6940,7 @@ int dsi_panel_send_roi_dcs(struct dsi_panel *panel, int ctrl_idx,
 				panel->name, rc);
 		return rc;
 	}
-	DSI_INFO("partial_update:[%s] send roi x %d y %d w %d h %d\n", panel->name,
+	DSI_DEBUG("partial_update:[%s] send roi x %d y %d w %d h %d\n", panel->name,
 			roi->x, roi->y, roi->w, roi->h);
 	SDE_EVT32(roi->x, roi->y, roi->w, roi->h);
 
