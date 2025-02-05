@@ -3781,7 +3781,6 @@ static void sde_encoder_vblank_callback(struct drm_encoder *drm_enc,
 	SDE_ATRACE_END("encoder_vblank_callback");
 }
 
-extern u32 old_bw;
 static void sde_encoder_underrun_callback(struct drm_encoder *drm_enc,
 		struct sde_encoder_phys *phy_enc)
 {
@@ -3797,8 +3796,8 @@ static void sde_encoder_underrun_callback(struct drm_encoder *drm_enc,
 		sde_enc->cur_master->ops.get_underrun_line_count(
 				sde_enc->cur_master);
 
-	pr_warn("Underrun detected count:%d, bandwidth=%uk",
-                atomic_read(&phy_enc->underrun_cnt), old_bw);
+	pr_warn("Underrun detected count:%d",
+                atomic_read(&phy_enc->underrun_cnt));
 
 	trace_sde_encoder_underrun(DRMID(drm_enc),
 		atomic_read(&phy_enc->underrun_cnt));
@@ -3811,7 +3810,6 @@ static void sde_encoder_underrun_callback(struct drm_encoder *drm_enc,
 	SDE_DBG_CTRL("panic_underrun");
 
 	SDE_ATRACE_END("encoder_underrun_callback");
-	BUG();
 }
 
 void sde_encoder_register_vblank_callback(struct drm_encoder *drm_enc,
