@@ -277,6 +277,11 @@ struct dsi_panel_apl_config {
 	bool apl_state;
 };
 
+struct dsi_panel_aod_config {
+	bool enable;
+	u32 aod_backlight_threshold;
+};
+
 enum panel_idx {
 	MAIN_IDX = 0,
 	SEC_INX,
@@ -390,6 +395,8 @@ struct dsi_panel {
 	struct drm_panel_cellid_config cellid_config;
 
 	struct dsi_panel_apl_config apl_config;
+
+	struct dsi_panel_aod_config aod_config;
 
 	struct dsi_parser_utils utils;
 

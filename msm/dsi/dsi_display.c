@@ -1827,6 +1827,7 @@ int dsi_display_set_power(struct drm_connector *connector,
 		return -EINVAL;
 	}
 
+	DSI_INFO("dsi_display_set_power power_mode = %d\n",power_mode);
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
 		rc = dsi_panel_set_lp1(display->panel);
