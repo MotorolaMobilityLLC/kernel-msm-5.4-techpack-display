@@ -300,6 +300,11 @@ struct dsi_panel_apl_config {
 	int dobly_enable;
 };
 
+struct dsi_panel_aod_config {
+	bool enable;
+	u32 aod_backlight_threshold;
+};
+
 enum panel_idx {
 	MAIN_IDX = 0,
 	SEC_INX,
@@ -415,6 +420,8 @@ struct dsi_panel {
 	struct dsi_panel_apl_config apl_config;
 
 	struct dsi_panel_PartitionRefreshrate_config prr_config;
+
+	struct dsi_panel_aod_config aod_config;
 
 	struct dsi_parser_utils utils;
 
