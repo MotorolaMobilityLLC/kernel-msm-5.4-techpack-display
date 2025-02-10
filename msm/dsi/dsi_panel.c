@@ -689,7 +689,8 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
-	       if (panel->prr_config.enable && (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_NOLP )) {
+	       if (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_LP3
+			|| type == DSI_CMD_SET_NOLP ) {
 	           dbgcmds = kzalloc(cmds->msg.tx_len * 4 + 1, GFP_KERNEL);
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmds->msg.tx_buf;
@@ -3176,6 +3177,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-disable-command",
 	"qcom,mdss-dsi-partition-refreshrate-on-command",
 	"qcom,mdss-dsi-partition-refreshrate-off-command",
+	"qcom,mdss-dsi-lp3-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -3243,6 +3245,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
 	"qcom,mdss-dsi-partition-refreshrate-on-command-state",
 	"qcom,mdss-dsi-partition-refreshrate-off-command-state",
+	"qcom,mdss-dsi-lp3-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5336,6 +5339,36 @@ static int dsi_panel_parse_prr_config(struct dsi_panel *panel)
        return 0;
 }
 
+static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_panel_aod_config *aod_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	aod_config = &panel->aod_config;
+	aod_config->enable = utils->read_bool(utils->data,
+		"qcom,mdss-dsi-panel-AOD-config-enabled");
+
+	if (aod_config->enable){
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-THRESHOLD-BL",
+                    &(aod_config->aod_backlight_threshold));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-config-enabled, set it to 0\n", __func__);
+                    aod_config->aod_backlight_threshold = 0;
+		}
+       }
+       DSI_INFO("%s:aod_config->enable = %d, aod_config->aod_backlight_threshold =%d\n", __func__,
+            aod_config->enable,aod_config->aod_backlight_threshold);
+
+       return 0;
+}
+
 static void dsi_panel_update_util(struct dsi_panel *panel,
 				  struct device_node *parser_node)
 {
@@ -5774,7 +5807,11 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 
 	rc = dsi_panel_parse_prr_config(panel);
 	if (rc)
-		DSI_DEBUG("failed to parse local hbm config, rc=%d\n", rc);
+		DSI_DEBUG("failed to parse local prr config, rc=%d\n", rc);
+
+	rc = dsi_panel_parse_aod_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local aod config, rc=%d\n", rc);
 
 	rc = dsi_panel_vreg_get(panel);
 	if (rc) {
@@ -6519,7 +6556,13 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 	if (!panel->panel_initialized)
 		goto exit;
 
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP2, false);
+	if(panel->aod_config.enable && panel->bl_config.brightness_updated < panel->aod_config.aod_backlight_threshold){
+		DSI_INFO("send DSI_CMD_SET_LP3\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP3, false);
+		}
+	else
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP2, false);
+
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_LP2 cmd, rc=%d\n",
 		       panel->name, rc);
