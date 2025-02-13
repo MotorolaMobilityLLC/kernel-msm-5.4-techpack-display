@@ -6147,6 +6147,8 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 
 	panel->disable_cesta_hw_sleep = utils->read_bool(utils->data,
 				"qcom,mdss-disable-cesta-hw-sleep");
+	if (panel->disable_cesta_hw_sleep)
+		DSI_INFO("qcom,mdss-disable-cesta-hw-sleep set, disable_cesta_hw_sleep:%d\n", panel->disable_cesta_hw_sleep);
 
 	rc = dsi_panel_parse_mot_panel_config(panel, of_node);
 	if (rc)
