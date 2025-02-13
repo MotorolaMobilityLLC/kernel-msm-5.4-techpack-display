@@ -320,6 +320,13 @@ struct dsi_panel_apl_config {
 struct dsi_panel_aod_config {
 	bool enable;
 	u32 aod_backlight_threshold;
+	bool bl_cmd_update;
+	bool bl_vid_update;
+	u32 min_nit;
+	u32 hig_nit;
+	u32 min_bl_reg;
+	u32 mid_bl_reg;
+	u32 hig_bl_reg;
 };
 
 enum panel_idx {

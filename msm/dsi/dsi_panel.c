@@ -690,7 +690,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
 	       if (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_LP3
-			|| type == DSI_CMD_SET_NOLP ) {
+			|| type == DSI_CMD_SET_NOLP || type == DSI_CMD_SET_CMD_SWITCH_IN) {
 	           dbgcmds = kzalloc(cmds->msg.tx_len * 4 + 1, GFP_KERNEL);
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmds->msg.tx_buf;
@@ -5607,9 +5607,56 @@ static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
                     "qcom,mdss-dsi-panel-AOD-THRESHOLD-BL",
                     &(aod_config->aod_backlight_threshold));
 		if (rc) {
-                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-config-enabled, set it to 0\n", __func__);
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-THRESHOLD-BL, set it to 0\n", __func__);
                     aod_config->aod_backlight_threshold = 0;
 		}
+
+		aod_config->bl_cmd_update= utils->read_bool(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-cmd-update");
+
+		aod_config->bl_vid_update= utils->read_bool(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-vid-update");
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-THRESHOLD-min-nit",
+                    &(aod_config->min_nit));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-THRESHOLD-min-nit, set it to 0\n", __func__);
+                    aod_config->min_nit = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-THRESHOLD-hig-nit",
+                    &(aod_config->hig_nit));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-THRESHOLD-hig-nit, set it to 0\n", __func__);
+                    aod_config->hig_nit = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-min",
+                    &(aod_config->min_bl_reg));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-bl-min, set it to 0\n", __func__);
+                    aod_config->min_bl_reg = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-mid",
+                    &(aod_config->mid_bl_reg));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-bl-mid, set it to 0\n", __func__);
+                    aod_config->mid_bl_reg = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-hig",
+                    &(aod_config->hig_bl_reg));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-bl-hig, set it to 0\n", __func__);
+                    aod_config->hig_bl_reg= 0;
+		}
+
        }
        DSI_INFO("%s:aod_config->enable = %d, aod_config->aod_backlight_threshold =%d\n", __func__,
             aod_config->enable,aod_config->aod_backlight_threshold);
@@ -6865,6 +6912,9 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 		panel->power_mode != SDE_MODE_DPMS_LP2)
 		dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 			"ibb", REGULATOR_MODE_IDLE);
+
+	if(panel->aod_config.bl_cmd_update)
+		dsi_panel_aod_backlight_update(panel,DSI_CMD_SET_LP1);
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP1, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_LP1 cmd, rc=%d\n",
@@ -6889,10 +6939,15 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 
 	if(panel->aod_config.enable && panel->bl_config.brightness_updated < panel->aod_config.aod_backlight_threshold){
 		DSI_INFO("send DSI_CMD_SET_LP3\n");
+		if(panel->aod_config.bl_cmd_update)
+			dsi_panel_aod_backlight_update(panel,DSI_CMD_SET_LP3);
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP3, false);
-		}
-	else
+	}
+	else {
+		if(panel->aod_config.bl_cmd_update)
+			dsi_panel_aod_backlight_update(panel,DSI_CMD_SET_LP2);
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP2, false);
+	}
 
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_LP2 cmd, rc=%d\n",
@@ -6946,6 +7001,9 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	     panel->power_mode == SDE_MODE_DPMS_LP2))
 		dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 			"ibb", REGULATOR_MODE_NORMAL);
+
+	if(panel->aod_config.bl_cmd_update)
+		dsi_panel_aod_backlight_update(panel,DSI_CMD_SET_NOLP);
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP, false);
 
 	if (rc)
@@ -7309,7 +7367,11 @@ int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+	if(panel->aod_config.bl_vid_update)
+		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_SWITCH_IN);
+
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_IN, false);
+
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
