@@ -79,5 +79,6 @@ static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
 // END Motorola zhanggb, IKSWT-18219
 
 bool dsi_panel_is_gsi_mode(void);
+void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_type type);
 
 #endif /* _DSI_DISPLAY_MOT_EXT_H_ */
