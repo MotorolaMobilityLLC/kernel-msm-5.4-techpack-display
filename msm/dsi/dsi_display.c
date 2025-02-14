@@ -1152,6 +1152,11 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 		return true;
 	}
 
+       if(panel->power_mode == SDE_MODE_DPMS_LP1 && dsi_display->display_idx == 1){
+		DSI_INFO("cli panel AOD LP1 ignore esd check\n");
+		return true;
+	}
+
 	dsi_panel_acquire_panel_lock(panel);
 
 	if (!panel->panel_initialized) {
