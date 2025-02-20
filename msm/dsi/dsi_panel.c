@@ -5225,6 +5225,13 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
 	panel->esd_first_check = false;
 	panel->check_pcd = of_property_read_bool(of_node,
 				"qcom,check_pcd");
+
+	rc = of_property_read_u32(of_node,
+				"qcom,mdss-dsi-panel-sf-brightnesszone-enable", &panel->enable_sf_brightnesszone);
+	if(rc){
+           DSI_INFO("qcom,mdss-dsi-panel-sf-brightnesszone-enable not found, set value 0xF\n");
+           panel->enable_sf_brightnesszone = 0xF;
+	}
 	return rc;
 }
 

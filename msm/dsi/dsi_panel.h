@@ -473,6 +473,7 @@ struct dsi_panel {
 	bool esd_first_check;
 	bool check_pcd;
 	int panelPcdCheck_enable;
+	int enable_sf_brightnesszone;
 };
 
 bool dsi_display_all_displays_dead(void);
