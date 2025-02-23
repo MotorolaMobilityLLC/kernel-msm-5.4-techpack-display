@@ -202,6 +202,8 @@ struct dsi_backlight_config {
 
 	/* backlight enable delay time */
 	u32 bl_enable_delay;
+
+	u32 aod_brightness_updated;
 };
 
 struct dsi_reset_seq {
@@ -274,6 +276,16 @@ struct dsi_panel_lhbm_config {
 	u32 lhbm_wait_for_fps_interval;
 	u32 *lhbm_not_allowed_fps_list;
 	u32 lhbm_not_allowed_fps_list_len;
+};
+
+struct dsi_panel_aod_config {
+	bool enable;
+	bool bl_vid_update;
+	u32 min_nit;
+	u32 hig_nit;
+	u32 min_bl_reg;
+	u32 mid_bl_reg;
+	u32 hig_bl_reg;
 };
 
 enum panel_idx {
@@ -389,6 +401,7 @@ struct dsi_panel {
 	struct dsi_panel_lhbm_config lhbm_config;
 
 	struct drm_panel_cellid_config cellid_config;
+	struct dsi_panel_aod_config aod_config;
 
 	struct dsi_parser_utils utils;
 
