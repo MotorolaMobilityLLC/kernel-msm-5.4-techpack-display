@@ -844,6 +844,12 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 		mode_flags = dsi->mode_flags;
 		dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	}
+
+	/* sometimes, aod update when screen off, bl_lvl=0 time,
+	     so aod maybe set to min bl wrong*/
+	if (bl_lvl)
+		panel->bl_config.aod_brightness_updated = bl_lvl;
+
 	if(panel->backlight_map_type == 1)
 		bl_lvl = mot_backlight_level[bl_lvl][panel->backlight_map_type-1];
 	else if(panel->backlight_map_type == 2 && bl_lvl <= 3515){
@@ -4847,6 +4853,70 @@ static void dsi_panel_cellid_config_deinit(struct drm_panel_cellid_config *celli
 		kfree(cellid_config->return_buf);
 }
 
+static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_panel_aod_config *aod_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	aod_config = &panel->aod_config;
+	aod_config->enable = utils->read_bool(utils->data,
+		"qcom,mdss-dsi-panel-AOD-config-enabled");
+
+	if (aod_config->enable) {
+		aod_config->bl_vid_update= utils->read_bool(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-vid-update");
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-THRESHOLD-min-nit",
+                    &(aod_config->min_nit));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-THRESHOLD-min-nit, set it to 0\n", __func__);
+                    aod_config->min_nit = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-THRESHOLD-hig-nit",
+                    &(aod_config->hig_nit));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-THRESHOLD-hig-nit, set it to 0\n", __func__);
+                    aod_config->hig_nit = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-min",
+                    &(aod_config->min_bl_reg));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-bl-min, set it to 0\n", __func__);
+                    aod_config->min_bl_reg = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-mid",
+                    &(aod_config->mid_bl_reg));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-bl-mid, set it to 0\n", __func__);
+                    aod_config->mid_bl_reg = 0;
+		}
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-hig",
+                    &(aod_config->hig_bl_reg));
+		if (rc) {
+                    DSI_ERR("%s:qcom,mdss-dsi-panel-AOD-bl-hig, set it to 0\n", __func__);
+                    aod_config->hig_bl_reg= 0;
+		}
+
+       }
+       DSI_INFO("%s:aod_config->enable = %d\n", __func__, aod_config->enable);
+
+       return 0;
+}
 
 static void dsi_panel_update_util(struct dsi_panel *panel,
 				  struct device_node *parser_node)
@@ -5275,6 +5345,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		DSI_DEBUG("failed to parse local hbm config, rc=%d\n", rc);
 
 	rc = dsi_panel_parse_cellid_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local cellid config, rc=%d\n", rc);
+
+	rc = dsi_panel_parse_aod_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse local cellid config, rc=%d\n", rc);
 
@@ -6304,6 +6378,9 @@ int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 	}
 
 	mutex_lock(&panel->panel_lock);
+
+	if (panel->aod_config.bl_vid_update)
+		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_SWITCH_IN);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_IN);
 	if (rc)
