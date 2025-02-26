@@ -148,7 +148,7 @@ void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
 
 	/* set mode name */
 	// Motorola zhanggb, Add refreshrate group, IKSWT-18219
-	if (dsi_mode->timing.refresh_rate_group_flag)
+	if (dsi_mode->timing.refresh_rate_group_flag < RRGSFlag_MAX)
 	    snprintf(drm_mode->name, DRM_DISPLAY_MODE_LEN, "%dx%dx%d%s@%d",
 			drm_mode->hdisplay, drm_mode->vdisplay,
 			drm_mode_vrefresh(drm_mode), panel_caps, dsi_mode->timing.refresh_rate_group_flag);
