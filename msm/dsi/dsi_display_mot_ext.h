@@ -65,6 +65,7 @@ enum dsi_display_mode_group_flag {
         RRGSFlag_90HzBased =  1 << 2,     // Only can switch between 90hz based refreshrates
         RRGSFlag_Special_Idle_1Hz =  1 << 3,     // Only can selected when idle and brightness high enough
         RRGSFlag_Special_Idle_10Hz =  1 << 4,    // Only can selected when idle and brightness high enough
+        RRGSFlag_MAX =  1 << 5,    // for default modes
 };
 
 static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
