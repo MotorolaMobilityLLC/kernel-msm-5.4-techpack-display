@@ -67,6 +67,7 @@ enum dsi_display_mode_group_flag {
         RRGSFlag_Special_Idle_10Hz =  1 << 4,    // Only can selected when idle and brightness high enough
         RRGSFlag_Partition_Refreshrate  = 1 << 5,   // Only can be selected when use partition refreshrate
         RRGSFlag_Partition_Refreshrate_LP = 1 << 6,   // Only can be selected when use low power partition refreshrate
+        RRGSFlag_MAX =  1 << 5,    // for default modes
 };
 #define PARTITION_REFRESHRATE 121
 #define PARTITION_REFRESHRATE_LP 161

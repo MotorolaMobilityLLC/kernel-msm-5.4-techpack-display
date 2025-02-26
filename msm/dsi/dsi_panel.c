@@ -1805,7 +1805,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	priv_info->mdp_transfer_time_us = mode->mdp_transfer_time_us;
 
 	// BEGIN Motorola zhanggb, 10/18/2022, IKSWT-18219
-	mode->refresh_rate_group_flag = 0;
+	mode->refresh_rate_group_flag = RRGSFlag_MAX;
 	if(utils->read_bool(utils->data, "qcom,framerate-group-no-duplicated"))
 	    mode->refresh_rate_group_flag |= RRGSFlag_All_No_Duplicated;
 	if(utils->read_bool(utils->data, "qcom,framerate-group-120hz-based"))
@@ -1821,6 +1821,13 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	    mode->refresh_rate_group_flag |= RRGSFlag_Partition_Refreshrate;
 	if(utils->read_bool(utils->data, "qcom,framerate-group-partition-refreshrate-lowpower"))
 	    mode->refresh_rate_group_flag |= RRGSFlag_Partition_Refreshrate_LP;
+
+       if (mode->refresh_rate_group_flag > RRGSFlag_MAX)
+	    mode->refresh_rate_group_flag &= ~RRGSFlag_MAX;
+
+	// Motorola zhanggb, Force the group id to 0
+	if(utils->read_bool(utils->data, "qcom,framerate-group-unrestricted"))
+	    mode->refresh_rate_group_flag = RRGSFlag_Unrestricted;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-width",
 				  &mode->h_active);
