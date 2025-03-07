@@ -1453,7 +1453,7 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel,
 		else
 			bl_lvl = HBM_BRIGHTNESS(param_info->value);
 		mutex_lock(&panel->panel_lock);
-		if (!dsi_panel_initialized(panel)) {
+		if (!dsi_panel_initialized(panel) ||panel->panel_trueaod_state) {
 		     DSI_INFO("Ignor bl_level %u as panel is not init.\n",(u32)bl_lvl);
 			rc = -EINVAL;
 			goto error;
@@ -1524,12 +1524,17 @@ static int dsi_panel_set_color(struct dsi_panel *panel,
 int dsi_panel_set_param(struct dsi_panel *panel,
 				struct msm_param_info *param_info)
 {
-	int rc = 0;
+	int rc = 0, i = 0;
 
 	if (!panel || !param_info) {
                 DSI_ERR("invalid params\n");
                 return -EINVAL;
         }
+
+	while (panel->panel_trueaod_state && i < 5) {
+		usleep_range(20 * 1000, 20 * 1000 + 100);
+		i++;
+	}
 
 	DSI_DEBUG("%s+\n", __func__);
 
@@ -6395,6 +6400,7 @@ int dsi_panel_switch_cmd_mode_out(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+	panel->panel_trueaod_state = true;
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_OUT);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_OUT cmds, rc=%d\n",
@@ -6415,6 +6421,7 @@ int dsi_panel_switch_video_mode_out(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+	panel->panel_trueaod_state = true;
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VID_SWITCH_OUT);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_OUT cmds, rc=%d\n",
@@ -6440,6 +6447,7 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
 
+	panel->panel_trueaod_state = false;
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -6455,6 +6463,7 @@ int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+	panel->panel_trueaod_state = true;
 	if(panel->aod_config.bl_vid_update)
 		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_SWITCH_IN);
 
