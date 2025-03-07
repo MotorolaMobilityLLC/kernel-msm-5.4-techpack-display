@@ -518,8 +518,8 @@ struct dsi_panel {
 	bool check_pcd;
 	int panelPcdCheck_enable;
 	struct drm_panel_pcd_config pcd_config;
-
 	struct sde_partition_refreshrate cur_partition_refreshrate;
+	bool panel_trueaod_state;
 };
 
 bool dsi_display_all_displays_dead(void);
