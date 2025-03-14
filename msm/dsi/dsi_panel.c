@@ -1258,7 +1258,7 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 		for (i =0; i < count; i++,cmds++) {
 			payload = (u8 *)cmds->msg.tx_buf;
 			if(param_info->value == HBM_FOD_ON_STATE) {
-				if(lhbm_config->ddic_type == 0x6126) { //For VTDR6126
+				if(lhbm_config->ddic_type == 0x6126 || lhbm_config->ddic_type == 0x6150) { //For VTDR6126 and VTDR6150
 					if(payload[0] == lhbm_config->alpha_reg) {
 						if(hbm_bl_lvl >lhbm_config->alpha_size) {
 							DSI_ERR("unsupport dbv level %d on local hbm\n", lhbm_config->dbv_level);
