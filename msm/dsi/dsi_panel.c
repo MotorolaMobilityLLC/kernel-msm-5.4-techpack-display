@@ -5688,6 +5688,9 @@ static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
                     aod_config->hig_bl_reg= 0;
 		}
 
+		aod_config->cmd_resend = utils->read_bool(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-command-resend");
+
        }
        DSI_INFO("%s:aod_config->enable = %d, aod_config->aod_backlight_threshold =%d\n", __func__,
             aod_config->enable,aod_config->aod_backlight_threshold);
@@ -7332,7 +7335,8 @@ int dsi_panel_switch_cmd_mode_out(struct dsi_panel *panel)
 
 	panel->panel_trueaod_state = true;
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_OUT, false);
-
+	if (panel->aod_config.cmd_resend)
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_OUT, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_OUT cmds, rc=%d\n",
 		       panel->name, rc);
@@ -7354,7 +7358,8 @@ int dsi_panel_switch_video_mode_out(struct dsi_panel *panel)
 
 	panel->panel_trueaod_state = true;
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VID_SWITCH_OUT, false);
-
+	if (panel->aod_config.cmd_resend)
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VID_SWITCH_OUT, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_OUT cmds, rc=%d\n",
 		       panel->name, rc);
@@ -7375,6 +7380,8 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VID_SWITCH_IN, false);
+	if (panel->aod_config.cmd_resend)
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VID_SWITCH_IN, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
@@ -7416,7 +7423,8 @@ int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 		dsi_panel_aod_backlight_update(panel, type);
 
 	rc = dsi_panel_tx_cmd_set(panel, type, false);
-
+	if (panel->aod_config.cmd_resend)
+		rc = dsi_panel_tx_cmd_set(panel, type, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
