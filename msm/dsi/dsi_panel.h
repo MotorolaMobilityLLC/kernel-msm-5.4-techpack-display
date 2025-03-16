@@ -286,6 +286,7 @@ struct dsi_panel_aod_config {
 	u32 min_bl_reg;
 	u32 mid_bl_reg;
 	u32 hig_bl_reg;
+	bool cmd_resend;
 };
 
 enum panel_idx {
