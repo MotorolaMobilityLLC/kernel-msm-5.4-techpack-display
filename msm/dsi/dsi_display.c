@@ -1072,7 +1072,7 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 		return true;
 	}
 
-       if (panel->power_mode == SDE_MODE_DPMS_LP1) {
+       if (panel->panel_trueaod_state) {
 		DSI_INFO("panel AOD LP1 ignore esd check\n");
 		return true;
 	}
