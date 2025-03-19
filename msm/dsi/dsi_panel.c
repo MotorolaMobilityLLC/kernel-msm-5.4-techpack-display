@@ -6382,9 +6382,6 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 		       panel->name, rc);
 
 	panel->panel_trueaod_state = false;
-	/* if miss the backlight when doze, bl_lvl_during_hbm is 0,
-	    cause backlight off when system on, so set it a non-zero value */
-	panel->bl_lvl_during_hbm = panel->bl_config.aod_brightness_updated;
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
