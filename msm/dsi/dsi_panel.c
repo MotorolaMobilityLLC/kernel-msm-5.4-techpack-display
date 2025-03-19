@@ -975,7 +975,11 @@ static bool dsi_panel_set_hbm_backlight(struct dsi_panel *panel, u32 *bl_lvl)
 			panel->bl_config.bl_max_level : panel->bl_lvl_during_hbm;
 		return false;
 	} else {
-		panel->bl_lvl_during_hbm = bl_level;
+		if (panel->aod_config.enable) {
+			if (bl_level)
+				panel->bl_lvl_during_hbm = bl_level;
+		} else
+			panel->bl_lvl_during_hbm = bl_level;
 		if (dsi_panel_param_is_hbm_on(panel)) {
 			DSI_INFO("HBM is on.. ignore setting backlight. bl_vl=%d\n",
 				panel->bl_lvl_during_hbm);
