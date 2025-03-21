@@ -690,7 +690,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
 	       if (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_LP3
-			|| type == DSI_CMD_SET_NOLP || type == DSI_CMD_SET_CMD_SWITCH_IN) {
+			|| type == DSI_CMD_SET_NOLP || type == DSI_CMD_SET_CMD_SWITCH_IN || type == DSI_CMD_SET_CMD_SWITCH_OUT) {
 	           dbgcmds = kzalloc(cmds->msg.tx_len * 4 + 1, GFP_KERNEL);
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmds->msg.tx_buf;
@@ -7369,6 +7369,8 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
+	if(panel->aod_config.bl_vid_update)
+		dsi_panel_set_backlight(panel, panel->bl_config.brightness_updated);
 
 	panel->panel_trueaod_state = false;
 	mutex_unlock(&panel->panel_lock);
