@@ -1738,6 +1738,7 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 	u8 *payload;
 	int i = 0;
 	int update_backlight_reg = 0;
+	int bl_level;
 
 	DSI_INFO("%s \n", __func__);
 
@@ -1754,33 +1755,37 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 		return;
 	}
 
-	if(panel->bl_config.brightness_updated == 0)
-		update_backlight_reg = 0;
-	else if(panel->bl_config.brightness_updated < panel->aod_config.min_nit)
+	if(panel->bl_config.bl_level == 0)
+		bl_level = panel->bl_config.aod_bl_level;
+	else
+		bl_level = panel->bl_config.bl_level;
+	if(bl_level == 0)
+		update_backlight_reg = panel->aod_config.mid_bl_reg;
+	else if(bl_level < panel->aod_config.min_nit)
 		update_backlight_reg = panel->aod_config.min_bl_reg;
-	else if(panel->bl_config.brightness_updated > panel->aod_config.hig_nit)
+	else if(bl_level > panel->aod_config.hig_nit)
 		update_backlight_reg = panel->aod_config.hig_bl_reg;
 	else
 		update_backlight_reg = panel->aod_config.mid_bl_reg;
-	DSI_INFO("brightness_updated = %d\n update_backlight_reg = %d\n",panel->bl_config.brightness_updated, update_backlight_reg);
+	pr_info("bl_config.aod_bl_level = %d bl_config.bl_level = %d\n",panel->bl_config.aod_bl_level, panel->bl_config.bl_level);
 
 	for (i =0; i < count; i++) {
 		payload = (u8 *)cmds->msg.tx_buf;
 		if(payload[0] == 0x51 && (type == DSI_CMD_SET_LP1 ||type == DSI_CMD_SET_LP2 ||type == DSI_CMD_SET_LP3)){
 			payload[1] = (update_backlight_reg & 0xFF00) >> 8;
 			payload[2] = update_backlight_reg & 0xFF;
-			DSI_INFO("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
+			pr_info("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
 				panel->name, payload[1],payload[2] );
 		}
 		if(payload[0] == 0x51 && type == DSI_CMD_SET_NOLP){
-			payload[1] = (panel->bl_config.brightness_updated & 0xFF00) >> 8;
-			payload[2] = panel->bl_config.brightness_updated & 0xFF;
-			DSI_INFO("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
+			payload[1] = (bl_level & 0xFF00) >> 8;
+			payload[2] = bl_level & 0xFF;
+			pr_info("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
 				panel->name, payload[1],payload[2] );
 		}
-		if(payload[0] == 0x6D && (type == DSI_CMD_SET_CMD_SWITCH_IN)){
+		if(payload[0] == 0x6D && (type == DSI_CMD_SET_CMD_SWITCH_IN || type == DSI_CMD_SET_CMD_BACKLIGHT)){
 			payload[1] = update_backlight_reg;
-			DSI_INFO("[%s]Update backlight reg : payload[1] = 0x%x \n",panel->name, payload[1]);
+			pr_info("[%s]Update backlight reg : payload[1] = 0x%x \n",panel->name, payload[1]);
 		}
 
 		cmds++;
