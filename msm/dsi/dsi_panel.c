@@ -1141,6 +1141,14 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		rc = -ENOTSUPP;
 	}
 
+	if(panel->aod_config.bl_vid_update && panel->panel_trueaod_state){
+		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_BACKLIGHT);
+	       rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_BACKLIGHT, false);
+		if (rc)
+		       DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_IN cmds, rc=%d\n",
+		            panel->name, rc);
+	}
+
 	return rc;
 }
 
@@ -3290,6 +3298,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-partition-refreshrate-off-command",
 	"qcom,mdss-dsi-lp3-command",
 	"qcom,mdss-dsi-panel-pcd-reg-command",
+	"qcom,cmd-mode-backlight-commands",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -3364,6 +3373,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-partition-refreshrate-off-command-state",
 	"qcom,mdss-dsi-lp3-command-state",
 	"qcom,mdss-dsi-panel-pcd-reg-command-state",
+	"qcom,cmd-mode-backlight-commands-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -7369,10 +7379,17 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
-	if(panel->aod_config.bl_vid_update)
-		dsi_panel_set_backlight(panel, panel->bl_config.brightness_updated);
-
 	panel->panel_trueaod_state = false;
+
+	if(panel->aod_config.bl_vid_update){
+		if(panel->bl_config.bl_level > 0)
+			dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
+		else if(panel->bl_config.aod_bl_level > 0)
+			dsi_panel_set_backlight(panel, panel->bl_config.aod_bl_level);
+		DSI_INFO("dsi_panel_switch_video_mode_in update backlight bl_level %d aod_bl_leve %d\n",
+			panel->bl_config.bl_level,panel->bl_config.aod_bl_level);
+	}
+
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }

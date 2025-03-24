@@ -211,6 +211,7 @@ struct dsi_backlight_config {
 	bool bl_is_exponent;
 	u32 brightness_updated;
 	bool bl_double_write;
+	u32 aod_bl_level;
 };
 
 struct dsi_reset_seq {
