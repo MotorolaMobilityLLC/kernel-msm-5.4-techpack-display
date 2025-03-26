@@ -848,7 +848,7 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	/* sometimes, aod update when screen off, bl_lvl=0 time,
 	     so aod maybe set to min bl wrong*/
 	if (bl_lvl)
-		panel->bl_config.aod_brightness_updated = bl_lvl;
+		panel->bl_config.aod_bl_level = bl_lvl;
 
 	if(panel->backlight_map_type == 1)
 		bl_lvl = mot_backlight_level[bl_lvl][panel->backlight_map_type-1];
@@ -1028,6 +1028,14 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	default:
 		DSI_ERR("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
+	}
+
+	if(panel->aod_config.bl_vid_update && panel->panel_trueaod_state){
+		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_BACKLIGHT);
+	       rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_BACKLIGHT);
+		if (rc)
+		       DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_IN cmds, rc=%d\n",
+		            panel->name, rc);
 	}
 
 	return rc;
@@ -2848,6 +2856,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-hbm-backlight-command",
 	"qcom,mdss-dsi-pcd-check-enable-command",
 	"qcom,mdss-dsi-pcd-check-disable-command",
+	"qcom,cmd-mode-backlight-commands",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2902,6 +2911,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-hbm-backlight-command-state",
 	"qcom,mdss-dsi-pcd-check-enable-command-state",
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
+	"qcom,cmd-mode-backlight-commands-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -6386,6 +6396,16 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 		       panel->name, rc);
 
 	panel->panel_trueaod_state = false;
+
+	if(panel->aod_config.bl_vid_update){
+		if(panel->bl_config.bl_level > 0)
+			dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
+		else if(panel->bl_config.aod_bl_level > 0)
+			dsi_panel_set_backlight(panel, panel->bl_config.aod_bl_level);
+		DSI_INFO("dsi_panel_switch_video_mode_in update backlight bl_level %d aod_bl_leve %d\n",
+			panel->bl_config.bl_level,panel->bl_config.aod_bl_level);
+	}
+
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
