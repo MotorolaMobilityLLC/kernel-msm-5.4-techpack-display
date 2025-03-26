@@ -203,7 +203,7 @@ struct dsi_backlight_config {
 	/* backlight enable delay time */
 	u32 bl_enable_delay;
 
-	u32 aod_brightness_updated;
+	u32 aod_bl_level;
 };
 
 struct dsi_reset_seq {
