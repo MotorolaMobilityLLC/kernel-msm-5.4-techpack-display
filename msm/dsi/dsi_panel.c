@@ -7386,6 +7386,9 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 			dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
 		else if(panel->bl_config.aod_bl_level > 0)
 			dsi_panel_set_backlight(panel, panel->bl_config.aod_bl_level);
+		else
+			dsi_panel_set_backlight(panel, panel->bl_config.brightness_default_level);
+
 		DSI_INFO("dsi_panel_switch_video_mode_in update backlight bl_level %d aod_bl_leve %d\n",
 			panel->bl_config.bl_level,panel->bl_config.aod_bl_level);
 	}
