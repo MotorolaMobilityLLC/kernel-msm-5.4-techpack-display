@@ -1778,6 +1778,8 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 				panel->name, payload[1],payload[2] );
 		}
 		if(payload[0] == 0x51 && type == DSI_CMD_SET_NOLP){
+			if(bl_level == 0)
+				bl_level = panel->aod_config.mid_bl_reg;
 			payload[1] = (bl_level & 0xFF00) >> 8;
 			payload[2] = bl_level & 0xFF;
 			pr_info("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
