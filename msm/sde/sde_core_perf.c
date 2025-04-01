@@ -187,6 +187,7 @@ static void _sde_core_perf_calc_crtc(struct sde_kms *kms,
 			perf->bw_ctl[SDE_POWER_HANDLE_DBUS_ID_EBI]);
 }
 
+u32 old_bw;
 int sde_core_perf_crtc_check(struct drm_crtc *crtc,
 		struct drm_crtc_state *state)
 {
@@ -264,6 +265,7 @@ int sde_core_perf_crtc_check(struct drm_crtc *crtc,
 		/* convert bandwidth to kb */
 		bw = DIV_ROUND_UP_ULL(bw_sum_of_intfs, 1000);
 		SDE_DEBUG("calculated bandwidth=%uk\n", bw);
+		old_bw = bw;
 
 		threshold = kms->catalog->perf.max_bw_high;
 
