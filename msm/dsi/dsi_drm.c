@@ -289,9 +289,9 @@ static void dsi_bridge_enable(struct drm_bridge *bridge)
 	if (display && display->drm_conn) {
 		sde_connector_helper_bridge_enable(display->drm_conn);
 		if (display->poms_pending) {
-			display->poms_pending = false;
 			sde_connector_schedule_status_work(display->drm_conn,
 				true);
+		       display->poms_pending = false;
 		}
 	}
 }
