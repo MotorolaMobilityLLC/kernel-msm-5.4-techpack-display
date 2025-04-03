@@ -837,10 +837,12 @@ void sde_connector_schedule_status_work(struct drm_connector *connector,
 {
 	struct sde_connector *c_conn;
 	struct msm_display_info info;
+	struct dsi_display *display;
 
 	c_conn = to_sde_connector(connector);
 	if (!c_conn)
 		return;
+	display = (struct dsi_display *) c_conn->display;
 
 	/* Return if there is no change in ESD status check condition */
 	if (en == c_conn->esd_status_check)
@@ -858,9 +860,15 @@ void sde_connector_schedule_status_work(struct drm_connector *connector,
 			 * If debugfs property is not set then take
 			 * default value
 			 */
-			interval = c_conn->esd_status_interval ?
-				c_conn->esd_status_interval :
-					STATUS_CHECK_INTERVAL_MS;
+			if(display->poms_pending)
+				interval = 200;
+			else
+			       interval = c_conn->esd_status_interval ?
+				        c_conn->esd_status_interval :
+					        STATUS_CHECK_INTERVAL_MS;
+
+		        SDE_INFO("sde_connector_schedule_status_work interval %d\n",interval);
+
 			/* Schedule ESD status check */
 			schedule_delayed_work(&c_conn->status_work,
 				msecs_to_jiffies(interval));
