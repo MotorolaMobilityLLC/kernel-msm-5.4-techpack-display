@@ -1838,8 +1838,13 @@ int dsi_display_set_power(struct drm_connector *connector,
 		DSI_ERR("invalid display/panel\n");
 		return -EINVAL;
 	}
+	if(power_mode == SDE_MODE_DPMS_OFF)
+		display->panel->dc_ignore_config = true;
+	else
+		display->panel->dc_ignore_config = false;
+	DSI_INFO("dsi_display_set_power power_mode = %d display->panel->dc_ignore_config = %d\n",
+		power_mode,display->panel->dc_ignore_config);
 
-	DSI_INFO("dsi_display_set_power power_mode = %d\n",power_mode);
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
 		rc = dsi_panel_set_lp1(display->panel);
