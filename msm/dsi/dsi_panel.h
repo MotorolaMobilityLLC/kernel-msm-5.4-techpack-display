@@ -521,6 +521,7 @@ struct dsi_panel {
 	struct drm_panel_pcd_config pcd_config;
 	struct sde_partition_refreshrate cur_partition_refreshrate;
 	bool panel_trueaod_state;
+	bool dc_ignore_config;
 };
 
 bool dsi_display_all_displays_dead(void);
