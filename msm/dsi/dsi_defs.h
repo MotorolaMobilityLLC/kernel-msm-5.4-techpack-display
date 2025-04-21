@@ -298,6 +298,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_PANEL_PCD_ENABLE:               Panel pcd check enable
  * @DSI_CMD_SET_PANEL_PCD_DISABLE:               Panel pcd check disable
  * @DSI_CMD_SET_LP3:                       Low power mode 3 //0~60nit using 24hz
+ * @DSI_CMD_SET_CMD_BACKLIGHT: Update video mode true aod backlight
+ * @DSI_CMD_SET_CMD_SWITCH_IN2:             Cmd mode switch in2
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -355,6 +357,7 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_PANEL_PCD_DISABLE,
 	DSI_CMD_SET_LP3,
 	DSI_CMD_SET_CMD_BACKLIGHT,
+	DSI_CMD_SET_CMD_SWITCH_IN2,
 	DSI_CMD_SET_MAX
 };
 

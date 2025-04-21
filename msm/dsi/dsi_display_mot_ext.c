@@ -1785,7 +1785,7 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 			pr_info("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
 				panel->name, payload[1],payload[2] );
 		}
-		if(payload[0] == 0x6D && (type == DSI_CMD_SET_CMD_SWITCH_IN || type == DSI_CMD_SET_CMD_BACKLIGHT)){
+		if(payload[0] == 0x6D && (type == DSI_CMD_SET_CMD_SWITCH_IN ||type == DSI_CMD_SET_CMD_SWITCH_IN2 || type == DSI_CMD_SET_CMD_BACKLIGHT)){
 			payload[1] = update_backlight_reg;
 			pr_info("[%s]Update backlight reg : payload[1] = 0x%x \n",panel->name, payload[1]);
 		}

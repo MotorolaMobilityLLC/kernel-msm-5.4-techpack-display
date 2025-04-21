@@ -676,7 +676,8 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
 	       if (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_LP3
-			|| type == DSI_CMD_SET_NOLP || type == DSI_CMD_SET_CMD_SWITCH_IN || type == DSI_CMD_SET_CMD_SWITCH_OUT) {
+			|| type == DSI_CMD_SET_NOLP || type == DSI_CMD_SET_CMD_SWITCH_IN || type == DSI_CMD_SET_CMD_SWITCH_IN2
+			|| type == DSI_CMD_SET_CMD_SWITCH_OUT) {
 	           dbgcmds = kzalloc(cmds->msg.tx_len * 4 + 1, GFP_KERNEL);
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmds->msg.tx_buf;
@@ -1104,7 +1105,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_BACKLIGHT);
 	       rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_BACKLIGHT);
 		if (rc)
-		       DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_IN cmds, rc=%d\n",
+		       DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_BACKLIGHT cmds, rc=%d\n",
 		            panel->name, rc);
 	}
 
@@ -2881,6 +2882,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-disable-command",
 	"qcom,mdss-dsi-lp3-command",
 	"qcom,cmd-mode-backlight-commands",
+	"qcom,cmd-mode-switch-in2-commands",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2938,6 +2940,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
 	"qcom,mdss-dsi-lp3-command-state",
 	"qcom,cmd-mode-backlight-commands-state",
+	"qcom,cmd-mode-switch-in2-commands-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -6602,6 +6605,7 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 {
 	int rc = 0;
+	enum dsi_cmd_set_type type = DSI_CMD_SET_CMD_SWITCH_IN;
 
 	if (!panel) {
 		DSI_ERR("Invalid params\n");
@@ -6611,10 +6615,13 @@ int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 
 	panel->panel_trueaod_state = true;
-	if(panel->aod_config.bl_vid_update)
-		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_SWITCH_IN);
+	if(panel->aod_config.aod_powerup)
+		type = DSI_CMD_SET_CMD_SWITCH_IN2;
 
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_IN);
+	if(panel->aod_config.bl_vid_update)
+		dsi_panel_aod_backlight_update(panel, type);
+
+	rc = dsi_panel_tx_cmd_set(panel, type);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
