@@ -1838,6 +1838,13 @@ int dsi_display_set_power(struct drm_connector *connector,
 		DSI_ERR("invalid display/panel\n");
 		return -EINVAL;
 	}
+
+	if(display->panel->power_mode == SDE_MODE_DPMS_OFF && power_mode == SDE_MODE_DPMS_LP1
+		&& display->panel->aod_config.bl_vid_update){
+		display->panel->aod_config.aod_powerup = true;
+	}else
+		display->panel->aod_config.aod_powerup = false;
+
 	if(power_mode == SDE_MODE_DPMS_OFF)
 		display->panel->dc_ignore_config = true;
 	else
