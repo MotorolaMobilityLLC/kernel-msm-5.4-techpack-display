@@ -783,15 +783,8 @@ static void _sde_core_perf_crtc_update_bus(struct sde_kms *kms,
 	bus_ab_quota = min(bus_ab_quota,
 			kms->catalog->perf.max_bw_high*1000ULL);
 
-	if (bus_ab_quota >= 4500000000ULL && strcmp(crtc->name, "crtc-1") == 0) {
-		if(bus_ab_quota + 2000000000ULL > kms->catalog->perf.max_bw_high*1000ULL){
-			bus_ab_quota = max(bus_ab_quota, kms->catalog->perf.max_bw_high*1000ULL);
-			SDE_INFO("change BW to Max value");
-		}else{
-			bus_ab_quota = bus_ab_quota + 2000000000ULL;
-			SDE_INFO("change BW to %llu value", bus_ab_quota);
-		}
-	}
+	if (bus_ab_quota < 1000000000ULL || bus_ab_quota > 20000000000ULL)
+		SDE_INFO("crtc->name: %s BW is %d",crtc->name, bus_ab_quota/100000000);
 
 	if (kms->catalog->perf.num_ddr_channels && kms->catalog->perf.dram_efficiency) {
 		bus_ib_quota = div_u64(div_u64(bus_ab_quota,
