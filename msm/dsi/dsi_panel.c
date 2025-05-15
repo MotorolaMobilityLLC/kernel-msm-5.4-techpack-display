@@ -2521,6 +2521,8 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		dfps_caps->type = DSI_DFPS_IMMEDIATE_HFP;
 	} else if (!strcmp(type, "dfps_immediate_porch_mode_vfp")) {
 		dfps_caps->type = DSI_DFPS_IMMEDIATE_VFP;
+	} else if (!strcmp(type, "dfps_immediate_porch_mode_cus")) {
+		dfps_caps->type = DSI_DFPS_IMMEDIATE_CUS;
 	} else {
 		DSI_ERR("[%s] dfps type is not recognized\n", name);
 		rc = -EINVAL;
@@ -2573,6 +2575,59 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 	if(dfps_caps->dfps_send_cmd_support) {
 		dfps_caps->panel_on_fps = dfps_caps->dfps_list[0];
 		dfps_caps->current_fps = dfps_caps->panel_on_fps;
+	}
+
+	if(dfps_caps->type == DSI_DFPS_IMMEDIATE_CUS){
+        	dfps_caps->dfps_vfp_list_len = utils->count_u32_elems(utils->data,
+        				  "qcom,dsi-supported-dfps-vfp-list");
+        	if (dfps_caps->dfps_vfp_list_len < 1) {
+        		DSI_ERR("[%s] dfps refresh vfp list not present\n", name);
+        		rc = -EINVAL;
+        		goto error;
+        	}
+
+        	dfps_caps->dfps_vfp_list = kcalloc(dfps_caps->dfps_vfp_list_len, sizeof(u32),
+        			GFP_KERNEL);
+        	if (!dfps_caps->dfps_vfp_list) {
+        		rc = -ENOMEM;
+        		goto error;
+        	}
+
+        	rc = utils->read_u32_array(utils->data,
+        			"qcom,dsi-supported-dfps-vfp-list",
+        			dfps_caps->dfps_vfp_list,
+        			dfps_caps->dfps_vfp_list_len);
+        	if (rc) {
+        		DSI_ERR("[%s] dfps refresh rate vfp list parse failed\n", name);
+        		rc = -EINVAL;
+        		goto error;
+        	}
+
+        	dfps_caps->dfps_hfp_list_len = utils->count_u32_elems(utils->data,
+        				  "qcom,dsi-supported-dfps-hfp-list");
+        	if (dfps_caps->dfps_hfp_list_len < 1) {
+        		DSI_ERR("[%s] dfps refresh hfp list not present\n", name);
+        		rc = -EINVAL;
+        		goto error;
+        	}
+
+        	dfps_caps->dfps_hfp_list = kcalloc(dfps_caps->dfps_hfp_list_len, sizeof(u32),
+        			GFP_KERNEL);
+        	if (!dfps_caps->dfps_hfp_list) {
+        		rc = -ENOMEM;
+        		goto error;
+        	}
+
+        	rc = utils->read_u32_array(utils->data,
+        			"qcom,dsi-supported-dfps-hfp-list",
+        			dfps_caps->dfps_hfp_list,
+        			dfps_caps->dfps_hfp_list_len);
+        	if (rc) {
+        		DSI_ERR("[%s] dfps refresh rate hfp list parse failed\n", name);
+        		rc = -EINVAL;
+        		goto error;
+        	}
+
 	}
 
 error:

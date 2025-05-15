@@ -216,6 +216,7 @@ enum dsi_color_swap_mode {
  * @DSI_DFPS_IMMEDIATE_CLK:
  * @DSI_DFPS_IMMEDIATE_HFP:
  * @DSI_DFPS_IMMEDIATE_VFP:
+ * @DSI_DFPS_IMMEDIATE_CUS: Customize VFP and HFP for seamless refresh rate switching
  * @DSI_DPFS_MAX:
  */
 enum dsi_dfps_type {
@@ -224,6 +225,7 @@ enum dsi_dfps_type {
 	DSI_DFPS_IMMEDIATE_CLK,
 	DSI_DFPS_IMMEDIATE_HFP,
 	DSI_DFPS_IMMEDIATE_VFP,
+	DSI_DFPS_IMMEDIATE_CUS,
 	DSI_DFPS_MAX
 };
 

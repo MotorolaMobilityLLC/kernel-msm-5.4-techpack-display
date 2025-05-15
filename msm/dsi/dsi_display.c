@@ -4939,7 +4939,7 @@ static bool dsi_display_is_seamless_dfps_possible(
 		DSI_DEBUG("timing.h_front_porch differs %d %d\n",
 				cur->timing.h_front_porch,
 				tgt->timing.h_front_porch);
-		if (dfps_type != DSI_DFPS_IMMEDIATE_HFP)
+		if (dfps_type != DSI_DFPS_IMMEDIATE_HFP  && dfps_type != DSI_DFPS_IMMEDIATE_CUS)
 			return false;
 	}
 
@@ -4977,7 +4977,7 @@ static bool dsi_display_is_seamless_dfps_possible(
 		DSI_DEBUG("timing.v_front_porch differs %d %d\n",
 				cur->timing.v_front_porch,
 				tgt->timing.v_front_porch);
-		if (dfps_type != DSI_DFPS_IMMEDIATE_VFP)
+		if (dfps_type != DSI_DFPS_IMMEDIATE_VFP && dfps_type != DSI_DFPS_IMMEDIATE_CUS)
 			return false;
 	}
 
@@ -5606,6 +5606,15 @@ static int dsi_display_get_dfps_timing(struct dsi_display *display,
 			timing->h_front_porch, adj_mode->timing.h_front_porch);
 		if (!rc)
 			adj_mode->timing.h_front_porch *= display->ctrl_count;
+		break;
+
+	case DSI_DFPS_IMMEDIATE_CUS:
+		adj_mode->timing.v_front_porch = dfps_caps.dfps_vfp_list[adj_mode->mode_idx];
+		adj_mode->timing.h_front_porch = dfps_caps.dfps_hfp_list[adj_mode->mode_idx];
+
+		SDE_EVT32(SDE_EVTLOG_FUNC_CASE1, DSI_DFPS_IMMEDIATE_CUS,
+			curr_refresh_rate, timing->refresh_rate,
+			timing->v_front_porch, adj_mode->timing.v_front_porch);
 		break;
 
 	default:
