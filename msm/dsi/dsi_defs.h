@@ -291,6 +291,7 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_PANEL_CELLID:               Panel cellid
  * @DSI_CMD_SET_PANEL_PCD_ENABLE:               Panel pcd check enable
  * @DSI_CMD_SET_PANEL_PCD_DISABLE:               Panel pcd check disable
+ * @DSI_CMD_SET_OFF_DEEP_STANDBY:               Panel deep standby,low power as sleep in
 
  * @DSI_CMD_SET_MAX
  */
@@ -347,6 +348,7 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_PANEL_PCD_ENABLE,
 	DSI_CMD_SET_PANEL_PCD_DISABLE,
 	DSI_CMD_SET_CMD_BACKLIGHT,
+	DSI_CMD_SET_OFF_DEEP_STANDBY,
 	DSI_CMD_SET_MAX
 };
 

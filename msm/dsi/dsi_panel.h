@@ -474,6 +474,7 @@ struct dsi_panel {
 	bool check_pcd;
 	int panelPcdCheck_enable;
 	bool panel_trueaod_state;
+	bool deep_standby_need_twice_reset;
 };
 
 bool dsi_display_all_displays_dead(void);
