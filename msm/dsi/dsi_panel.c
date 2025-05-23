@@ -539,6 +539,14 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 			pr_info("%s: (%s)+power is alway on \n", __func__, panel->name);
 		goto exit;
 	}
+
+	if ((panel->tp_state_check_enable) && (!panel->tp_state)) {
+		if( (panel->deep_standby_need_twice_reset)) {
+			pr_info("%s: (%s)+exit deep standby need reset \n", __func__, panel->name);
+			rc = dsi_panel_reset(panel);
+		}
+	}
+
 	if (gpio_is_valid(panel->reset_config.vio_en_gpio))
 		gpio_set_value(panel->reset_config.vio_en_gpio, 1);
 
@@ -2859,6 +2867,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-enable-command",
 	"qcom,mdss-dsi-pcd-check-disable-command",
 	"qcom,cmd-mode-backlight-commands",
+	"qcom,mdss-dsi-off-deep-standby-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2914,6 +2923,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-enable-command-state",
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
 	"qcom,cmd-mode-backlight-commands-state",
+	"qcom,mdss-dsi-off-deep-standby-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5131,6 +5141,9 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
 	panel->tp_state_need_reset = of_property_read_bool(of_node,
 				"qcom,tp_state_need_reset");
 
+	panel->deep_standby_need_twice_reset = of_property_read_bool(of_node,
+				"qcom,deep-standby-need-twice-reset");
+
 	rc = of_property_read_u32(of_node,
 				"qcom,backlight_map_type",&panel->backlight_map_type);
        if (rc) {
@@ -6860,6 +6873,23 @@ int dsi_panel_disable(struct dsi_panel *panel)
 					panel->name, rc);
 			rc = 0;
 		}
+		if (panel->tp_state_check_enable && (!panel_power_is_alway_on (panel))) {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF_DEEP_STANDBY);
+			if (rc) {
+			/*
+			 * Sending panel off deep sleep commands may fail when  DSI
+			 * controller is in a bad state. These failures can be
+			 * ignored since controller will go for full reset on
+			 * subsequent display enable anyway.
+			 */
+			pr_warn_ratelimited("[%s] failed to send DSI_CMD_SET_OFF_DEEP_STANDBY cmds, rc=%d\n",
+					panel->name, rc);
+			rc = 0;
+			} else {
+				pr_info("%s: (%s)+ send deep_standby commands success! \n", __func__, panel->name);
+			}
+		}
+
 	}
 	panel->panel_initialized = false;
 	panel->power_mode = SDE_MODE_DPMS_OFF;
