@@ -150,9 +150,6 @@ struct msm_kms_funcs {
 			u32 hdisplay, u32 *num_dsc);
 	bool (*in_trusted_vm)(const struct msm_kms *kms);
 	bool (*in_loopback_mode)(struct drm_crtc_state *crtc_state);
-	/* set panel feature */
-	int (*set_panel_feature)(const struct msm_kms *kms,
-			struct panel_param_info param_info);
 };
 
 struct msm_kms {
