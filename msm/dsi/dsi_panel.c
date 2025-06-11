@@ -3434,6 +3434,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dfps-90-command",
 	"qcom,mdss-dsi-dfps-120-command",
 	"qcom,mdss-dsi-dfps-144-command",
+	"qcom,mdss-dsi-panel-pcd-reg-command",
 	"qcom,mdss-dsi-panel-cellid-command",
 	"qcom,mdss-dsi-panel-cellid-send-command",
 	"qcom,mdss-dsi-panel-cellid-send-back-command",
@@ -3511,7 +3512,10 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dfps-90-command-state",
 	"qcom,mdss-dsi-dfps-120-command-state",
 	"qcom,mdss-dsi-dfps-144-command-state",
+	"qcom,mdss-dsi-panel-pcd-reg-command-state",
 	"qcom,mdss-dsi-panel-cellid-command-state",
+	"qcom,mdss-dsi-panel-cellid-send-command-state",
+	"qcom,mdss-dsi-panel-cellid-send-back-command-states",
 	"qcom,mdss-dsi-panel-apl-on-command-state",
 	"qcom,mdss-dsi-panel-apl-off-command-state",
 	"qcom,mdss-dsi-pcd-check-enable-command-state",
@@ -5701,6 +5705,79 @@ static void dsi_panel_cellid_config_deinit(struct drm_panel_cellid_config *celli
 		kfree(cellid_config->return_buf);
 }
 
+static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct drm_panel_pcd_config *pcd_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	pcd_config = &panel->pcd_config;
+	if (!pcd_config)
+		return -EINVAL;
+
+	pcd_config->pcd_reg_enabled = utils->read_bool(utils->data,
+		"qcom,pcd-reg-read-enabled");
+
+	if (!pcd_config->pcd_reg_enabled)
+		return 0;
+
+	dsi_panel_parse_cmd_sets_sub(&pcd_config->pcd_reg_cmd,
+				DSI_CMD_SET_PANEL_PCD_REG, utils);
+	if (!pcd_config->pcd_reg_cmd.count) {
+		DSI_ERR("panel pcd_reg command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	rc = utils->read_u32(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-read-length",
+		&(pcd_config->pcd_reg_rlen));
+	if (rc) {
+		DSI_ERR("%s:qcom,mdss-dsi-panel-pcd-reg-read-length, set it to 1\n", __func__);
+		pcd_config->pcd_reg_rlen = 1;
+	}
+
+	rc = utils->read_u32(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-offset",
+		&(pcd_config->pcd_reg_offset));
+	if (rc) {
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-offset, set it to 0\n", __func__);
+		pcd_config->pcd_reg_offset = 0;
+	}
+
+	rc = utils->read_u32(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-mask",
+		&(pcd_config->pcd_reg_mask));
+	if (rc) {
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-mask, set it to 0\n", __func__);
+		pcd_config->pcd_reg_mask = 0;
+	}
+
+	pcd_config->return_buf = kcalloc(pcd_config->pcd_reg_rlen,
+			sizeof(unsigned char), GFP_KERNEL);
+	if (!pcd_config->return_buf) {
+		DSI_ERR("%s:kcalloc for return_buf error \n", __func__);
+		rc = -ENOMEM;
+		goto error;
+	}
+
+	return 0;
+error:
+	pcd_config->pcd_reg_enabled = false;
+	return rc;
+}
+
+static void dsi_panel_pcd_config_deinit(struct drm_panel_pcd_config *pcd_config)
+{
+	if (pcd_config->return_buf)
+		kfree(pcd_config->return_buf);
+}
+
 static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -6231,6 +6308,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (rc)
 		DSI_DEBUG("failed to parse local cellid config, rc=%d\n", rc);
 
+	rc = dsi_panel_parse_pcd_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse pcd reg config, rc=%d\n", rc);
+
 	rc = dsi_panel_parse_apl_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse local apl config, rc=%d\n", rc);
@@ -6282,6 +6363,7 @@ void dsi_panel_put(struct dsi_panel *panel)
 	dsi_panel_esd_config_deinit(&panel->esd_config);
 	dsi_panel_cellid_config_deinit(&panel->cellid_config);
 	dsi_panel_lhbm_config_deinit(&panel->lhbm_config);
+	dsi_panel_pcd_config_deinit(&panel->pcd_config);
 
 	kfree(panel->avr_caps.avr_step_fps_list);
 	kfree(panel);
@@ -8505,6 +8587,68 @@ error:
 		       	panel->name, rc);
 	}
 
+	return rc;
+}
+
+int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel)
+{
+	int rc = 0, i = 0;
+	ssize_t len;
+	struct dsi_cmd_desc *cmds;
+	struct drm_panel_pcd_config *pcd_config;
+	enum dsi_cmd_set_state state;
+	u32 count;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	pcd_config = &panel->pcd_config;
+	if (!pcd_config) {
+		DSI_ERR("pcd_config is null\n");
+		return -EINVAL;
+	}
+
+	len = pcd_config->pcd_reg_rlen;
+	count = pcd_config->pcd_reg_cmd.count;
+	cmds = pcd_config->pcd_reg_cmd.cmds;
+	state = pcd_config->pcd_reg_cmd.state;
+
+	if (count == 0) {
+		DSI_INFO("[%s] No DSI_CMD_SET_PANEL_PCD_REG commands to be sent\n",
+			 panel->name);
+		goto error;
+	}
+
+	dsi_panel_acquire_panel_lock(panel);
+	for (i = 0; i < count; i++) {
+		cmds->ctrl_flags = 0;
+
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		if (cmds->msg.type == MIPI_DSI_DCS_READ) {
+			cmds->msg.flags |= MIPI_DSI_MSG_UNICAST_COMMAND;
+			cmds->msg.rx_buf = pcd_config->return_buf;
+			cmds->msg.rx_len = (pcd_config->pcd_reg_rlen > MAX_PANEL_PCD_REG_LEN) ?
+							 MAX_PANEL_PCD_REG_LEN : pcd_config->pcd_reg_rlen;
+			cmds->ctrl_flags = DSI_CTRL_CMD_READ;
+		}
+
+		len = dsi_host_transfer_sub(panel->host, cmds, false);
+		if (len < 0) {
+			rc = len;
+			DSI_ERR("failed to set DSI_CMD_SET_PANEL_PCD_REG  cmds, rc=%d\n", rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	dsi_panel_release_panel_lock(panel);
 	return rc;
 }
 
