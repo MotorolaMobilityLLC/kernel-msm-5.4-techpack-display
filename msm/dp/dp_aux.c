@@ -773,6 +773,54 @@ static void dp_aux_set_sim_mode(struct dp_aux *dp_aux,
 	mutex_unlock(&aux->mutex);
 }
 
+static int dp_aux_configure_gpio_switch(struct dp_aux *dp_aux,
+		bool enable, int orientation)
+{
+	struct dp_aux_private *aux;
+	int rc = 0;
+
+	if (!dp_aux) {
+		DP_AUX_ERR(dp_aux, "invalid input\n");
+		rc = -EINVAL;
+		goto end;
+	}
+
+	aux = container_of(dp_aux, struct dp_aux_private, dp_aux);
+
+	if (!aux->aux_switch_node) {
+		DP_AUX_ERR(dp_aux, "undefined fsa4480 handle\n");
+		rc = -EINVAL;
+		goto end;
+	}
+
+	DP_AUX_INFO(dp_aux, "enable=%d, orientation=%d\n",
+			enable, orientation);
+
+	if (gpio_is_valid(dp_aux->dp_aux_switch_flip_gpio) ||
+		gpio_is_valid(dp_aux->dp_aux_switch_enable_gpio)) {
+		bool switch_enable = false;
+		bool switch_flip = false;
+		if (orientation == ORIENTATION_CC1 && enable) {
+			switch_enable = true;
+			switch_flip = false;
+		} else if (orientation == ORIENTATION_CC2 && enable) {
+			switch_enable = true;
+			switch_flip = true;
+		}
+		if (gpio_is_valid(dp_aux->dp_aux_switch_enable_gpio))
+			gpio_set_value(dp_aux->dp_aux_switch_enable_gpio,
+						switch_enable ? 0 : 1);
+
+		if (gpio_is_valid(dp_aux->dp_aux_switch_flip_gpio))
+			gpio_set_value(dp_aux->dp_aux_switch_flip_gpio,
+						switch_flip ? 1 : 0);
+		DP_INFO("dp_aux_switch: en=%d, cc=%d, sw_en=%d, sw_flip=%d\n",
+				enable, orientation, switch_enable, switch_flip);
+	}
+end:
+	return rc;
+}
+
 #if IS_ENABLED(CONFIG_QCOM_FSA4480_I2C)
 static int dp_aux_configure_fsa_switch(struct dp_aux *dp_aux,
 		bool enable, int orientation)
@@ -963,6 +1011,8 @@ struct dp_aux *dp_aux_get(struct device *dev, struct dp_catalog_aux *catalog,
 			dp_aux->switch_unregister_notifier = wcd_usbss_unreg_notifier;
 		}
 #endif
+	} else {
+		dp_aux->switch_configure = dp_aux_configure_gpio_switch;
 	}
 
 	return dp_aux;
