@@ -40,6 +40,7 @@
 #define DSI_MODE_MATCH_EMSYNC_FPS (1 << 4)
 
 #define MAX_PANEL_CELLID      50
+#define MAX_PANEL_PCD_REG_LEN 50
 
 /*
  * DSI Validate Mode modifiers

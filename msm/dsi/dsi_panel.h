@@ -266,6 +266,15 @@ struct drm_panel_cellid_config {
 	u8 *return_buf;
 };
 
+struct drm_panel_pcd_config {
+	bool pcd_reg_enabled;
+	struct dsi_panel_cmd_set pcd_reg_cmd;
+	u32 pcd_reg_rlen;
+	u32 pcd_reg_offset;
+	u32 pcd_reg_mask;
+	u8 *return_buf;
+};
+
 struct dsi_panel_spr_info {
 	bool enable;
 	enum msm_display_spr_pack_type pack_type;
@@ -506,6 +515,8 @@ struct dsi_panel {
 	bool esd_first_check;
 	bool check_pcd;
 	int panelPcdCheck_enable;
+	struct drm_panel_pcd_config pcd_config;
+
 	struct sde_partition_refreshrate cur_partition_refreshrate;
 };
 
@@ -693,5 +704,6 @@ int dsi_panel_set_elvss_dim_off(struct dsi_panel *panel, u8 val);
 int dsi_panel_parse_elvss_config(struct dsi_panel *panel, u8 elv_vl);
 int dsi_panel_dfps_send_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel);
+int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel);
 void set_panelpcdcheck_enable(struct dsi_panel *panel);
 #endif /* _DSI_PANEL_H_ */
