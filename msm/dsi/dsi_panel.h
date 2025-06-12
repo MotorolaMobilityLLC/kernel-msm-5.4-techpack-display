@@ -258,6 +258,9 @@ struct drm_panel_esd_config {
 struct drm_panel_cellid_config {
 	bool cellid_enabled;
 	struct dsi_panel_cmd_set cellid_cmd;
+	struct dsi_panel_cmd_set cellid_send_cmd;
+	struct dsi_panel_cmd_set cellid_send_back_cmd;
+	bool cellid_send_cmds_enabled;
 	u32 cellid_rlen;
 	u32 cellid_offset;
 	u8 *return_buf;

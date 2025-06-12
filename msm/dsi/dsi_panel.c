@@ -3409,6 +3409,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dfps-120-command",
 	"qcom,mdss-dsi-dfps-144-command",
 	"qcom,mdss-dsi-panel-cellid-command",
+	"qcom,mdss-dsi-panel-cellid-send-command",
+	"qcom,mdss-dsi-panel-cellid-send-back-command",
 	"qcom,mdss-dsi-panel-apl-on-command",
 	"qcom,mdss-dsi-panel-apl-off-command",
 	"qcom,mdss-dsi-pcd-check-enable-command",
@@ -5607,6 +5609,26 @@ static int dsi_panel_parse_cellid_config(struct dsi_panel *panel)
 		DSI_ERR("panel cellid command parsing failed\n");
 		rc = -EINVAL;
 		goto error;
+	}
+
+	cellid_config->cellid_send_cmds_enabled = utils->read_bool(utils->data,
+		"qcom,mdss-dsi-panel-cellid-send-command-enabled");
+
+	if (cellid_config->cellid_send_cmds_enabled){
+		dsi_panel_parse_cmd_sets_sub(&cellid_config->cellid_send_cmd,
+				DSI_CMD_SET_PANEL_SEND_CELLID, utils);
+		if (!cellid_config->cellid_send_cmd.count) {
+			DSI_ERR("panel cellid send command parsing failed\n");
+			rc = -EINVAL;
+			goto error;
+		}
+		dsi_panel_parse_cmd_sets_sub(&cellid_config->cellid_send_back_cmd,
+				DSI_CMD_SET_PANEL_SEND_CELLID_BACK, utils);
+		if (!cellid_config->cellid_send_back_cmd.count) {
+			DSI_ERR("panel cellid send back command parsing failed\n");
+			rc = -EINVAL;
+			goto error;
+		}
 	}
 
 	rc = utils->read_u32(utils->data,
@@ -8174,6 +8196,13 @@ int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel)
 		goto error;
 	}
 
+	if(cellid_config->cellid_send_cmds_enabled){
+		rc = dsi_panel_tx_send_mot_cmd(panel, &cellid_config->cellid_send_cmd);
+		if (rc)
+			DSI_INFO("[%s] failed to send DSI_CMD_SEND_CELLID cmd, rc=%d\n",
+		       	panel->name, rc);
+	}
+
 	dsi_panel_acquire_panel_lock(panel);
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
@@ -8202,6 +8231,14 @@ int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel)
 	}
 error:
 	dsi_panel_release_panel_lock(panel);
+
+	if(cellid_config->cellid_send_cmds_enabled){
+		rc = dsi_panel_tx_send_mot_cmd(panel, &cellid_config->cellid_send_back_cmd);
+		if (rc)
+			DSI_INFO("[%s] failed to send DSI_CMD_SEND_BACK_CELLID cmd, rc=%d\n",
+		       	panel->name, rc);
+	}
+
 	return rc;
 }
 
