@@ -793,7 +793,7 @@ static int dp_aux_configure_gpio_switch(struct dp_aux *dp_aux,
 		goto end;
 	}
 
-	DP_AUX_INFO(dp_aux, "enable=%d, orientation=%d\n",
+	DP_INFO("enable=%d, orientation=%d\n",
 			enable, orientation);
 
 	if (gpio_is_valid(dp_aux->dp_aux_switch_flip_gpio) ||
