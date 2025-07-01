@@ -278,6 +278,10 @@ struct dsi_panel_spr_info {
 
 struct dsi_panel_lhbm_config {
 	bool enable;
+	bool lhbm_on_cmds_enable;
+	u32 lhbm_on_cmds_line_diff;
+	struct dsi_panel_cmd_set lhbm_on_cmd_l;
+	struct dsi_panel_cmd_set lhbm_on_cmd_h;
 	u32 dc_hybird_threshold;
 	u32 dbv_level;
 	u32 alpha_reg;
