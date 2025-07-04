@@ -1163,6 +1163,7 @@ struct msm_display_info {
 	bool event_notification_disabled;
 
 	uint32_t te_source;
+	void __iomem *te_gpio_mmio;
 	int disp_te_gpio;
 	bool esd_rw_check;
 

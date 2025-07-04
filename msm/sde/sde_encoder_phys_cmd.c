@@ -1742,6 +1742,8 @@ static void sde_encoder_phys_cmd_connect_te(
 		struct sde_encoder_phys *phys_enc, bool enable)
 {
 	enum msm_disp_op disp_op;
+	struct sde_encoder_virt *sde_enc;
+	sde_enc = to_sde_encoder_virt(phys_enc->parent);
 	if (!phys_enc || !phys_enc->hw_pp || !phys_enc->hw_intf)
 		return;
 
@@ -1755,6 +1757,12 @@ static void sde_encoder_phys_cmd_connect_te(
 				enable);
 	else
 		return;
+
+    struct msm_display_info *info;
+    info = &sde_enc->disp_info;
+    if (info->te_gpio_mmio) {
+       sde_gpio_toggle(info->te_gpio_mmio);
+    }
 
 	SDE_EVT32(DRMID(phys_enc->parent), enable);
 }
