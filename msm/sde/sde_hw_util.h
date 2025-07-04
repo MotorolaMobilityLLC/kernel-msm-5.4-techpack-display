@@ -351,6 +351,12 @@ void sde_qtimer_start(struct sde_qtimer *sde_qtimer);
  */
 void sde_qtimer_stop(struct sde_qtimer *sde_qtimer);
 
+/**
+ * sde_gpio_toggle - Toggle GPIO
+ * gpio_mmio - ioremap of tlmm gpio
+ */
+void sde_gpio_toggle(void __iomem *gpio_mmio);
+
 static inline bool is_qseed3_rev_qseed3lite(struct sde_mdss_cfg *sde_cfg)
 {
 	return ((sde_cfg->qseed_sw_lib_rev == SDE_SSPP_SCALER_QSEED3LITE) ?

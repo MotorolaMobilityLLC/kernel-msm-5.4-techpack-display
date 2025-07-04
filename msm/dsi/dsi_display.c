@@ -28,6 +28,7 @@
 #include "dsi_display_manager.h"
 #include "dsi_hfi.h"
 #include "dsi_display_mot_ext.h"
+#include <linux/pinctrl/qcom-pinctrl.h>
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
@@ -785,6 +786,8 @@ static void dsi_display_parse_te_data(struct dsi_display *display)
 	struct device *dev;
 	int rc = 0;
 	u32 val = 0;
+	struct resource res;
+	bool gpio_pin_status = false;
 
 	pdev = display->pdev;
 	if (!pdev) {
@@ -800,6 +803,11 @@ static void dsi_display_parse_te_data(struct dsi_display *display)
 
 	display->disp_te_gpio = of_get_named_gpio(dev->of_node,
 					"qcom,platform-te-gpio", 0);
+
+	if (gpio_is_valid(display->disp_te_gpio)) {
+		gpio_pin_status = msm_gpio_get_pin_address(display->disp_te_gpio, &res);
+		display->te_gpio_mmio = ioremap(res.start, 4);
+	}
 
 	if (display->fw)
 		rc = dsi_parser_read_u32(display->parser_node,
@@ -8199,6 +8207,7 @@ int dsi_display_get_info(struct drm_connector *connector,
 	info->poms_align_vsync = display->panel->poms_align_vsync;
 	info->is_te_using_watchdog_timer = is_sim_panel(display);
 	info->event_notification_disabled = display->panel->event_notification_disabled;
+	info->te_gpio_mmio = display->te_gpio_mmio;
 	info->disable_cesta_hw_sleep = display->panel->disable_cesta_hw_sleep;
 	info->disp_te_gpio = display->disp_te_gpio;
 	info->esd_rw_check = display->panel->esd_config.esd_enabled &&

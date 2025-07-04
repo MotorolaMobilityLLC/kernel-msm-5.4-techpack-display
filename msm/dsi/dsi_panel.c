@@ -7465,7 +7465,7 @@ int dsi_panel_send_qsync_on_dcs(struct dsi_panel *panel,
 
 	mutex_lock(&panel->panel_lock);
 
-	DSI_DEBUG("ctrl:%d qsync on\n", ctrl_idx);
+	DSI_INFO("ctrl:%d qsync on\n", ctrl_idx);
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_QSYNC_ON, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_QSYNC_ON cmds rc=%d\n",
@@ -7487,7 +7487,7 @@ int dsi_panel_send_qsync_off_dcs(struct dsi_panel *panel,
 
 	mutex_lock(&panel->panel_lock);
 
-	DSI_DEBUG("ctrl:%d qsync off\n", ctrl_idx);
+	DSI_INFO("ctrl:%d qsync off\n", ctrl_idx);
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_QSYNC_OFF, false);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_QSYNC_OFF cmds rc=%d\n",

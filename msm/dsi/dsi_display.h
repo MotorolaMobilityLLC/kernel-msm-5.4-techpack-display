@@ -267,6 +267,7 @@ struct dsi_display {
 	bool sw_te_using_wd;
 	struct mutex display_lock;
 	int disp_te_gpio;
+	void __iomem *te_gpio_mmio;
 	bool is_te_irq_enabled;
 	struct completion esd_te_gate;
 
