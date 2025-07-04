@@ -1028,6 +1028,7 @@ static void sde_encoder_phys_vid_connect_te(
 	struct sde_encoder_virt *sde_enc;
 	enum msm_disp_op disp_op;
 	struct sde_connector *c_conn;
+	struct msm_display_info *info;
 
 	if (!phys_enc || !phys_enc->hw_intf || !phys_enc->parent)
 		return;
@@ -1038,9 +1039,13 @@ static void sde_encoder_phys_vid_connect_te(
 		return;
 
 	c_conn = to_sde_connector(phys_enc->connector);
-	if (phys_enc->hw_intf->ops.connect_external_te[disp_op]) {
+	info = &sde_enc->disp_info;
+	if (phys_enc->hw_intf->ops.connect_external_te[disp_op]){
 		phys_enc->hw_intf->ops.connect_external_te[disp_op](phys_enc->hw_intf, enable);
-
+		if (sde_enc->disp_info.vrr_caps.video_psr_support &&
+				info->te_gpio_mmio)
+			sde_gpio_toggle(info->te_gpio_mmio);
+		
 		if (sde_enc->disp_info.vrr_caps.video_psr_support && enable)
 			c_conn->ops.toggle_te(c_conn->display);
 	}

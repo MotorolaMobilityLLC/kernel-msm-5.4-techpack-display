@@ -24,7 +24,7 @@
 #define SDE_ENCODER_NAME_MAX	16
 
 /* wait for at most 2 vsync for lowest refresh rate (24hz) */
-#define DEFAULT_KICKOFF_TIMEOUT_MS		84
+#define DEFAULT_KICKOFF_TIMEOUT_MS		1001
 
 /* if default timeout fails wait additional time in 1s increments */
 #define EXTENDED_KICKOFF_TIMEOUT_MS      1000

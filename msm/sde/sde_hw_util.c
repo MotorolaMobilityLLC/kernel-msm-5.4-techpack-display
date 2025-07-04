@@ -180,6 +180,21 @@ void sde_qtimer_stop(struct sde_qtimer *sde_qtimer)
 	SDE_EVT32(0);
 }
 
+void sde_gpio_toggle(void __iomem *gpio_mmio)
+{
+	u32 val, val_gpio;
+
+	val_gpio = readl_relaxed(gpio_mmio);
+	/* clear 5:2	FUNC_SEL */
+	val = val_gpio & ~(0x3c);
+	writel_relaxed(val, gpio_mmio);
+	usleep_range(1,2);
+	/* write back original value */
+	writel_relaxed(val_gpio, gpio_mmio);
+
+	SDE_EVT32(val_gpio, val);
+}
+
 void sde_reg_write(struct sde_hw_blk_reg_map *c,
 		u32 reg_off,
 		u32 val,
