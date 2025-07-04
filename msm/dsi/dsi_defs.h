@@ -323,8 +323,6 @@ enum dsi_dyn_clk_feature_type {
  * @	DSI_CMD_SET_PANEL_PRR_DISABLE,              partition refreshrate OFF
  * @DSI_CMD_SET_LP3:                       Low power mode 3 //0~60nit using 24hz
  * @DSI_CMD_SET_PANEL_PCD_REG:             Panel pcd reg
- * @DSI_CMD_SET_HBM_FOD_ON_CMDS_L:         Set HBM_FOD on cmds for bl low
- * @DSI_CMD_SET_HBM_FOD_ON_CMDS_H:         Set HBM_FOD on cmds for bl high
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -398,8 +396,6 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_PANEL_PRR_DISABLE,
 	DSI_CMD_SET_LP3,
 	DSI_CMD_SET_PANEL_PCD_REG,
-	DSI_CMD_SET_HBM_FOD_ON_CMDS_L,
-	DSI_CMD_SET_HBM_FOD_ON_CMDS_H,
 	DSI_CMD_SET_MAX
 };
 

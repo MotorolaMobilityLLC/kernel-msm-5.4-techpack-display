@@ -1335,9 +1335,7 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 	struct dsi_cmd_desc *cmds;
 	int alpha_level;
 	int bl_num;
-	struct dsi_panel_cmd_set *new_cmd_set;
-	struct dsi_cmd_desc *new_cmds;
-	int j, count_new, count_last;
+	u32 *cmd_new;
 
 	panel_param = &panel->param_cmds[param_info->param_idx];
 	if (!panel_param) {
@@ -1365,22 +1363,40 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 			goto end;
 		}
 
-		if (lhbm_config->lhbm_on_cmds_enable) {
-		    //set different lhbm cmds per bl level
-		    if (lhbm_config->dbv_level > lhbm_config->dc_hybird_threshold) {
-				new_cmd_set = &lhbm_config->lhbm_on_cmd_h;
-				DSI_INFO("%s: lhbm_on_cmd_h, dc_hybird_threshold=%d, dbv_level=%d\n", __func__, lhbm_config->dc_hybird_threshold, lhbm_config->dbv_level);
-			} else {
-				new_cmd_set = &lhbm_config->lhbm_on_cmd_l;
-				DSI_INFO("%s: lhbm_on_cmd_l, dc_hybird_threshold=%d, dbv_level=%d\n", __func__, lhbm_config->dc_hybird_threshold, lhbm_config->dbv_level);
-			}
+		if (lhbm_config->lhbm_bl_cmds_enable && (param_info->value == HBM_FOD_ON_STATE)) {
+			int cmd_count = lhbm_config->lhbm_bl_cmds_count;
+			int i;
 
-			new_cmds = new_cmd_set->cmds;
-			count_new = new_cmd_set->count;
-			if (!count_new) {
-				DSI_INFO("%s: no new cmds to be handle, goto end\n", __func__);
+			if (cmd_count < 2) {
+				DSI_ERR("%s, lhbm_bl_cmds_count:%d < 2, goto end\n", __func__, cmd_count);
 				goto end;
 			}
+			if (!lhbm_config->lhbm_bl_cmds_len) {
+				DSI_ERR("%s, new cmd len 0, goto end\n", __func__);
+				goto end;
+			}
+
+			//get different lhbm cmds per bl level
+			for (i = 0; i < (cmd_count - 1); i++) {
+				if (lhbm_config->dbv_level < lhbm_config->lhbm_bl_thresholds[i]) {
+					if (i > 0)
+						DSI_INFO("%s: cmd count:%d, dvb_level:%d, bl_threshold[%d]:%d, bl_threshold[%d]:%d\n", __func__, i, lhbm_config->dbv_level, i-1, lhbm_config->lhbm_bl_thresholds[i-1], i, lhbm_config->lhbm_bl_thresholds[i]);
+					else
+						DSI_INFO("%s: cmd count:0, dvb_level:%d, bl_threshold[0]:%d\n", __func__, lhbm_config->dbv_level, lhbm_config->lhbm_bl_thresholds[0]);
+					break;
+				}
+			}
+
+			if (i == cmd_count-1)
+				DSI_INFO("%s: cmd count:%d, dvb_level:%d, bl_threshold[%d]:%d\n", __func__, i, lhbm_config->dbv_level, i-1, lhbm_config->lhbm_bl_thresholds[i-1]);
+
+			cmd_new = lhbm_config->lhbm_bl_cmds_bl[i];
+			if (!cmd_new) {
+				DSI_ERR("%s: lhbm_bl_cmds_bl[%d] NULL. goto end\n", __func__, i);
+				goto end;
+			}
+			else
+				DSI_INFO("%s: get lhbm_bl_cmds_bl[%d]\n", __func__, i);
 		}
 
 		cmds = param_map_state->cmds->cmds;
@@ -1395,46 +1411,36 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 				alpha_level = lhbm_config->dbv_level;
 		}
 
-		j = 0;
-		count_last = 0;
 		for (i =0; i < count; i++, cmds++) {
 		  payload = (u8 *)cmds->msg.tx_buf;
-		  if (lhbm_config->lhbm_on_cmds_enable) {
+		  if (lhbm_config->lhbm_bl_cmds_enable) {
 		  	if (param_info->value == HBM_FOD_ON_STATE) {
-				if(i < lhbm_config->lhbm_on_cmds_line_diff) {
-					count_last++;
-					DSI_DEBUG("%s: keep same cmds:%d\n", __func__, i);
+				if(i < lhbm_config->lhbm_bl_cmds_line_diff) {
+					DSI_DEBUG("%s: keep same cmds msg:%d\n", __func__, i);
 					continue;
 				}
-				else if(j < count_new) {
-					u8* payload_new = (u8 *)new_cmds->msg.tx_buf;
+				else {
 					u8 tx_len = cmds->msg.tx_len;
-					u8 tx_len_new = new_cmds->msg.tx_len;
-					if (tx_len_new <= tx_len) {
-						for (int k = 0; k < cmds->msg.tx_len; k++) {
-							//debug log1
-							DSI_DEBUG("%s: cmds[%d] old playload[%d]: %02x",  __func__, i, k, payload[k]);
-						}
+					u8 new_len = lhbm_config->lhbm_bl_cmds_len;
 
-						memcpy(payload, payload_new, tx_len_new);
-						cmds->msg.tx_len = tx_len_new;
-						count_last++;
-						param_map_state->cmds->count = count_last;
-
-						for (int k = 0; k < cmds->msg.tx_len; k++) {
-							//debug log2
-							DSI_DEBUG("%s: cmds[%d] new playload[%d]: %02x",  __func__, i, k, payload[k]);
+					DSI_INFO("%s: payload[0]=%02x, cmd_new[0]=%02x\n", __func__, payload[0], cmd_new[0]);
+					if (payload[0] == cmd_new[0]) {
+						u8 len = (new_len < tx_len) ? new_len : tx_len;
+						for (int k = 0; k < len; k++) {
+							if (cmd_new[k] != payload[k]) {
+								u8 tmp = payload[k];
+								payload[k] = (u8)cmd_new[k];
+								DSI_INFO("%s: cmd line[%d]: playload[%d] old:%02x, new:%02x", __func__, i, k, tmp, payload[k]);
+							}
 						}
+						cmds->msg.tx_len = len;
+						goto end;
 					}
 					else
-						DSI_ERR("%s: cmd:[%d] for new:%d len exceed, tx_len=%d, tx_len_new=%d, skip\n", __func__, i, j, tx_len, tx_len_new);
+						DSI_INFO("%s: skip different reg for cmd:[%d], reg ori:%02x, new:%02x\n", __func__, i, payload[0], cmd_new[0]);
 
-					new_cmds++;
-					j++;
 					continue;
 				}
-				else
-					goto end;
 			}
 			else if(param_info->value == HBM_OFF_STATE && payload[0] == 0x51) {
 				payload[1] = (lhbm_config->dbv_level&0xff00)>>8;
@@ -1443,7 +1449,7 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 				rc =  0;
 				goto end;
 			}
-		  } //lhbm_on_cmds_enable end
+		  } //lhbm_bl_cmds_enable end
 		  else {
 			if(param_info->value == HBM_FOD_ON_STATE && payload[0] == lhbm_config->alpha_reg) {
 				if(alpha_level >lhbm_config->alpha_size) {
@@ -3281,8 +3287,6 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-partition-refreshrate-off-command",
 	"qcom,mdss-dsi-lp3-command",
 	"qcom,mdss-dsi-panel-pcd-reg-command",
-	"qcom,mdss-dsi-hbm-fod-on-cmds-l-command",
-	"qcom,mdss-dsi-hbm-fod-on-cmds-h-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -3356,8 +3360,6 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-partition-refreshrate-off-command-state",
 	"qcom,mdss-dsi-lp3-command-state",
 	"qcom,mdss-dsi-panel-pcd-reg-command-state",
-	"qcom,mdss-dsi-hbm-fod-on-cmds-l-command-state",
-	"qcom,mdss-dsi-hbm-fod-on-cmds-h-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5218,35 +5220,75 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 			lhbm_config->bl_num = 0;
 		}
 
-		lhbm_config->lhbm_on_cmds_enable = utils->read_bool(utils->data,
-			"qcom,mdss-dsi-panel-local-hbm-on-cmds-enabled");
-		if (lhbm_config->lhbm_on_cmds_enable) {
-			DSI_INFO("%s: lhbm_on_cmds_enable 1\n", __func__);
-
-			rc = utils->read_u32(utils->data, "qcom,mdss-dsi-hbm-fod-on-cmds-line-diff", &(lhbm_config->lhbm_on_cmds_line_diff));
-			if (rc) {
-				DSI_INFO("%s:qcom,mdss-dsi-hbm-fod-on-cmds-line-diff not set\n", __func__);
-				lhbm_config->lhbm_on_cmds_line_diff = 0;
-				rc = 0;
+		lhbm_config->lhbm_bl_cmds_enable = utils->read_bool(utils->data,
+			"qcom,mdss-dsi-panel-local-hbm-bl-cmds-enabled");
+		if (lhbm_config->lhbm_bl_cmds_enable) {
+			DSI_INFO("%s: lhbm_bl_cmds_enable 1\n", __func__);
+			rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-local-hbm-bl-cmds-count", &(lhbm_config->lhbm_bl_cmds_count));
+			if (!lhbm_config->lhbm_bl_cmds_count) {
+				DSI_ERR("%s:qcom,mdss-dsi-panel-local-hbm-bl-cmds-count not set\n", __func__);
 			}
 			else
-				DSI_INFO("%s:qcom,mdss-dsi-hbm-fod-on-cmds-line-diff set:%d\n", __func__, lhbm_config->lhbm_on_cmds_line_diff);
+				DSI_INFO("%s:qcom,mdss-dsi-panel-local-hbm-bl-cmds-count set:%d\n", __func__, lhbm_config->lhbm_bl_cmds_count);
 
-			//parse lhbm cmds
-			dsi_panel_parse_cmd_sets_sub(&lhbm_config->lhbm_on_cmd_l,
-						DSI_CMD_SET_HBM_FOD_ON_CMDS_L, utils);
-			if (!lhbm_config->lhbm_on_cmd_l.count)
-				DSI_INFO("%s: panel lhbm_on_cmd_l command parsing failed\n", __func__);
+			//read bl threshold array
+			if (lhbm_config->lhbm_bl_cmds_count > 1) {
+				rc = utils->read_u32_array(utils->data,
+						"qcom,mdss-dsi-panel-local-hbm-bl-thresholds",
+						lhbm_config->lhbm_bl_thresholds,
+						(lhbm_config->lhbm_bl_cmds_count - 1));
+				if (rc) {
+					lhbm_config->lhbm_bl_cmds_count = 1;
+					DSI_ERR("%s:%d, mdss-dsi-hbm-fod-on-cmds-bl-thresholds not set, rc:%u\n",
+							__func__, __LINE__, rc);
+				}
+			}
 
-			dsi_panel_parse_cmd_sets_sub(&lhbm_config->lhbm_on_cmd_h,
-						DSI_CMD_SET_HBM_FOD_ON_CMDS_H, utils);
-			if (!lhbm_config->lhbm_on_cmd_h.count)
-				DSI_INFO("%s: panel lhbm_on_cmd_h command parsing failed\n", __func__);
+			rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-local-hbm-bl-cmds-line-diff", &(lhbm_config->lhbm_bl_cmds_line_diff));
+			if (rc) {
+				DSI_INFO("%s:qcom,mdss-dsi-panel-local-hbm-bl-cmds-line-diff not set\n", __func__);
+				lhbm_config->lhbm_bl_cmds_line_diff = 0;
+			}
+
+			rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-local-hbm-bl-cmds-len", &(lhbm_config->lhbm_bl_cmds_len));
+			if (rc) {
+				DSI_ERR("%s:qcom,mdss-dsi-panel-local-hbm-bl-cmds-len not set\n", __func__);
+				lhbm_config->lhbm_bl_cmds_len = 0;
+				return rc;
+			}
+			else
+				DSI_DEBUG("%s:qcom,mdss-dsi-panel-local-hbm-bl-cmds-len set:0x%02x\n", __func__, lhbm_config->lhbm_bl_cmds_len);
+
+			//get lhbm cmds list
+			size = lhbm_config->lhbm_bl_cmds_len * sizeof(u32);
+			for (int i = 0; i < lhbm_config->lhbm_bl_cmds_count; i++) {
+				char *cmds_str_pre = "qcom,mdss-dsi-panel-local-hbm-bl-cmds";
+				char cmds_str[50];
+				sprintf(cmds_str,"%s%d", cmds_str_pre, i);
+
+				lhbm_config->lhbm_bl_cmds_bl[i] = kzalloc(size, GFP_KERNEL);
+				if (!lhbm_config->lhbm_bl_cmds_bl[i]) {
+					rc = -ENOMEM;
+					DSI_ERR("%s:%d, no memory for local hbm cmds, rc:%u\n", __func__, __LINE__, rc);
+					lhbm_config->enable = false;
+					return rc;
+				}
+
+				rc = utils->read_u32_array(utils->data,
+						cmds_str,
+						lhbm_config->lhbm_bl_cmds_bl[i],
+						lhbm_config->lhbm_bl_cmds_len);
+				if (rc) {
+					DSI_ERR("%s:%d, %s not set, rc:%u\n", __func__, __LINE__, cmds_str, rc);
+				}
+				else
+					DSI_INFO("%s: get %s\n", __func__, cmds_str);
+			}
 
 			return rc;
 		}
 		else
-		    DSI_INFO("%s:qcom,mdss-dsi-hbm-fod-dc-cmd-enabled NOT defined\n", __func__);
+		    DSI_DEBUG("%s: qcom,mdss-dsi-panel-local-hbm-bl-cmds-enabled not defined\n", __func__);
 
 		rc = utils->read_u32(utils->data,
 			"qcom,mdss-dsi-panel-local-hbm-alpha-size",

@@ -50,6 +50,8 @@
 #define HBM_BRIGHTNESS(value) ((value) == HBM_OFF_STATE ?\
 			BRIGHTNESS_HBM_OFF : BRIGHTNESS_HBM_ON)
 
+#define MAX_BL_CMDS_COUNT	5
+
 /* HBM implementation is different, depending on display and backlight hardware
  * design, which is classified into the following types:
  * HBM_TYPE_OLED: OLED panel, HBM is controlled by DSI register only, which
@@ -278,10 +280,12 @@ struct dsi_panel_spr_info {
 
 struct dsi_panel_lhbm_config {
 	bool enable;
-	bool lhbm_on_cmds_enable;
-	u32 lhbm_on_cmds_line_diff;
-	struct dsi_panel_cmd_set lhbm_on_cmd_l;
-	struct dsi_panel_cmd_set lhbm_on_cmd_h;
+	bool lhbm_bl_cmds_enable;
+	u32 lhbm_bl_cmds_line_diff;
+	u32 lhbm_bl_cmds_count;
+	u32 lhbm_bl_cmds_len;
+	u32 *lhbm_bl_cmds_bl[MAX_BL_CMDS_COUNT];
+	u32 lhbm_bl_thresholds[MAX_BL_CMDS_COUNT-1];
 	u32 dc_hybird_threshold;
 	u32 dbv_level;
 	u32 alpha_reg;
