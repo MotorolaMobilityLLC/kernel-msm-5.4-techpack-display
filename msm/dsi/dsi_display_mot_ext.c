@@ -1785,9 +1785,22 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 			pr_info("[%s] Update backlight reg : payload[1] = 0x%x  payload[2] = 0x%x\n",
 				panel->name, payload[1],payload[2] );
 		}
-		if(payload[0] == 0x6D && (type == DSI_CMD_SET_CMD_SWITCH_IN ||type == DSI_CMD_SET_CMD_SWITCH_IN2 || type == DSI_CMD_SET_CMD_BACKLIGHT)){
-			payload[1] = update_backlight_reg;
-			pr_info("[%s]Update backlight reg : payload[1] = 0x%x \n",panel->name, payload[1]);
+
+		if (type == DSI_CMD_SET_CMD_SWITCH_IN || type == DSI_CMD_SET_CMD_SWITCH_IN2 || type == DSI_CMD_SET_CMD_BACKLIGHT) {
+			if (payload[0] == 0x6D) {
+				payload[1] = update_backlight_reg;
+				pr_info("[%s]Update backlight reg : payload[1] = 0x%x \n",panel->name, payload[1]);
+			}
+			else if (payload[0] == 0xA9 && payload[3] == 0x51) {
+				payload[6] = (update_backlight_reg & 0xFF00) >> 8;
+				payload[7] = update_backlight_reg & 0xFF;
+				pr_info("[%s] update aod backlight reg: payload[6]=0x%02X payload[7]=0x%02X\n", panel->name, payload[6], payload[7]);
+			}
+			else if (payload[0] == 0x51) {
+				payload[1] = (update_backlight_reg & 0xFF00) >> 8;
+				payload[2] = update_backlight_reg & 0xFF;
+				pr_info("[%s] update aod backlight reg: payload[1]=0x%02X payload[2]=0x%02X\n", panel->name, payload[1], payload[2] );
+			}
 		}
 
 		cmds++;
