@@ -1759,8 +1759,10 @@ static void sde_encoder_phys_cmd_connect_te(
 		return;
 
     struct msm_display_info *info;
+    u32 qsync_mode;
+    qsync_mode = sde_connector_get_qsync_mode(phys_enc->connector);
     info = &sde_enc->disp_info;
-    if (info->te_gpio_mmio) {
+    if (info->te_gpio_mmio && qsync_mode) {
        sde_gpio_toggle(info->te_gpio_mmio);
     }
 
