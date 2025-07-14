@@ -1906,6 +1906,8 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	    mode->refresh_rate_group_flag |= RRGSFlag_Partition_Refreshrate;
 	if(utils->read_bool(utils->data, "qcom,framerate-group-partition-refreshrate-lowpower"))
 	    mode->refresh_rate_group_flag |= RRGSFlag_Partition_Refreshrate_LP;
+	if(utils->read_bool(utils->data, "qcom,framerate-group-VRR-refreshrate-120hz"))
+	    mode->refresh_rate_group_flag |= RRGSFlag_VRR_Refreshrate_120hz;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-width",
 				  &mode->h_active);

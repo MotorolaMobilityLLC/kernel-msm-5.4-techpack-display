@@ -67,6 +67,7 @@ enum dsi_display_mode_group_flag {
         RRGSFlag_Special_Idle_10Hz =  1 << 4,    // Only can selected when idle and brightness high enough
         RRGSFlag_Partition_Refreshrate  = 1 << 5,   // Only can be selected when use partition refreshrate
         RRGSFlag_Partition_Refreshrate_LP = 1 << 6,   // Only can be selected when use low power partition refreshrate
+        RRGSFlag_VRR_Refreshrate_120hz = 1 << 7,   // Only can be selected when use vrr qsync on/off refreshrate
 };
 #define PARTITION_REFRESHRATE 121
 #define PARTITION_REFRESHRATE_LP 161
@@ -80,6 +81,8 @@ static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
 		return 121;
 	else if (timing->refresh_rate_group_flag & RRGSFlag_Partition_Refreshrate_LP)
 		return 161;
+	else if (timing->refresh_rate_group_flag & RRGSFlag_VRR_Refreshrate_120hz)
+		return 122;
 	else
 		return timing->refresh_rate;
 }
