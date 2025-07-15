@@ -4009,10 +4009,12 @@ static void sde_encoder_virt_enable(struct drm_encoder *drm_enc)
 	if (!sde_enc->crtc)
 		sde_enc->crtc = drm_enc->crtc;
 
-	cur_mode = &sde_enc->base.crtc->state->adjusted_mode;
+	if (sde_enc->base.crtc->state){
+		cur_mode = &sde_enc->base.crtc->state->adjusted_mode;
 
-	SDE_DEBUG_ENC(sde_enc, "\n");
-	SDE_EVT32(DRMID(drm_enc), cur_mode->hdisplay, cur_mode->vdisplay);
+		SDE_DEBUG_ENC(sde_enc, "\n");
+		SDE_EVT32(DRMID(drm_enc), cur_mode->hdisplay, cur_mode->vdisplay);
+	}
 
 	for (i = 0; i < sde_enc->num_phys_encs; i++) {
 		struct sde_encoder_phys *phys = sde_enc->phys_encs[i];
