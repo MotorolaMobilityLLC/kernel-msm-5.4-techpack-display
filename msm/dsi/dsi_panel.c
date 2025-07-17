@@ -1539,6 +1539,7 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 				struct msm_param_info *param_info)
 {
 	int rc = 0;
+	struct panel_param *panel_param;
 
 	if (!panel || !param_info) {
                 DSI_ERR("invalid params\n");
@@ -1548,6 +1549,18 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 	if (panel->panel_trueaod_state) {
 		DSI_ERR("panel in Aod\n");
 		return -EINVAL;
+	}
+
+
+	if (param_info->param_idx >= PARAM_ID_NUM) {
+		DSI_ERR("Invalid param_idx %d\n", param_info->param_idx);
+		return -EINVAL;
+	}
+	panel_param = &panel->param_cmds[param_info->param_idx];
+
+	if (!panel_param->is_supported) {
+		DSI_INFO("param_idx %d is not supported\n", param_info->param_idx);
+		return rc;
 	}
 
 	DSI_DEBUG("%s+\n", __func__);
