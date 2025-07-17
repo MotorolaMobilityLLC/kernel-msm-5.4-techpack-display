@@ -4145,6 +4145,12 @@ static void sde_encoder_virt_enable(struct drm_encoder *drm_enc)
 	}
 
 	_sde_encoder_input_handler_register(drm_enc);
+
+	if (!sde_enc->cur_master || !sde_enc->cur_master->connector) {
+		SDE_ERROR("invalid master or its connector.\n");
+		return;
+	}
+
 	c_state = to_sde_connector_state(sde_enc->cur_master->connector->state);
 	if (!c_state) {
 		SDE_ERROR("invalid connector state\n");
