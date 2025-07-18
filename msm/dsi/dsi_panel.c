@@ -4875,7 +4875,7 @@ static int dsi_panel_parse_cellid_config(struct dsi_panel *panel)
 	if (!cellid_config->cellid_enabled)
 		return 0;
 
-	dsi_panel_parse_cmd_sets_sub(&cellid_config->cellid_cmd,
+	dsi_panel_parse_cmd_sets_sub(panel, &cellid_config->cellid_cmd,
 				DSI_CMD_SET_PANEL_CELLID, utils);
 	if (!cellid_config->cellid_cmd.count) {
 		DSI_ERR("panel cellid command parsing failed\n");
@@ -4948,7 +4948,7 @@ static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 		goto error;
 	}
 
-	dsi_panel_parse_cmd_sets_sub(&apl_config->apl_cmd_on,
+	dsi_panel_parse_cmd_sets_sub(panel, &apl_config->apl_cmd_on,
 				DSI_CMD_SET_APL_ON, utils);
 	if (!apl_config->apl_cmd_on.count) {
 		DSI_ERR("panel apl_cmd_on command parsing failed\n");
@@ -4956,7 +4956,7 @@ static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 		goto error;
 	}
 
-	dsi_panel_parse_cmd_sets_sub(&apl_config->apl_cmd_off,
+	dsi_panel_parse_cmd_sets_sub(panel, &apl_config->apl_cmd_off,
 				DSI_CMD_SET_APL_OFF, utils);
 	if (!apl_config->apl_cmd_off.count) {
 		DSI_ERR("panel apl_cmd_off command parsing failed\n");
@@ -5164,7 +5164,7 @@ static int dsi_panel_parse_param_prop(struct dsi_panel *panel,
 				continue;
 			}
 
-			rc = dsi_panel_parse_cmd_sets_sub(param_map->cmds,
+			rc = dsi_panel_parse_cmd_sets_sub(panel, param_map->cmds,
 							type, utils);
 			if (rc) {
 				DSI_WARN("panel param cmd %s parsing failed\n",
