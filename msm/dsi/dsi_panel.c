@@ -2881,6 +2881,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-disable-command",
 	"qcom,cmd-mode-backlight-commands",
 	"qcom,mdss-dsi-off-deep-standby-command",
+	"qcom,mdss-dsi-off-post-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2937,6 +2938,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
 	"qcom,cmd-mode-backlight-commands-state",
 	"qcom,mdss-dsi-off-deep-standby-command-state",
+	"qcom,mdss-dsi-off-post-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -6899,7 +6901,22 @@ int dsi_panel_disable(struct dsi_panel *panel)
 					panel->name, rc);
 			rc = 0;
 			} else {
-				pr_info("%s: (%s)+ send deep_standby commands success! \n", __func__, panel->name);
+				pr_info("%s: (%s)+ : send deep_standby commands success! \n", __func__, panel->name);
+			}
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF_PANELIC_MIPI);
+			if (rc) {
+			/*
+			 * Sending panel off disable ic mipi commands may fail when  DSI
+			 * controller is in a bad state. These failures can be
+			 * ignored since controller will go for full reset on
+			 * subsequent display enable anyway.
+			 */
+			pr_warn_ratelimited("[%s] failed to send DSI_CMD_SET_OFF_PANELIC_MIPI cmds, rc=%d\n",
+					panel->name, rc);
+			rc = 0;
+			} else {
+				pr_info("%s: (%s)+ :send panel ic off mipi commands success! \n", __func__, panel->name);
 			}
 		}
 
