@@ -1413,44 +1413,7 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 
 		for (i =0; i < count; i++, cmds++) {
 		  payload = (u8 *)cmds->msg.tx_buf;
-		  if (lhbm_config->lhbm_bl_cmds_enable) {
-		  	if (param_info->value == HBM_FOD_ON_STATE) {
-				if(i < lhbm_config->lhbm_bl_cmds_line_diff) {
-					DSI_DEBUG("%s: keep same cmds msg:%d\n", __func__, i);
-					continue;
-				}
-				else {
-					u8 tx_len = cmds->msg.tx_len;
-					u8 new_len = lhbm_config->lhbm_bl_cmds_len;
 
-					DSI_INFO("%s: payload[0]=%02x, cmd_new[0]=%02x\n", __func__, payload[0], cmd_new[0]);
-					if (payload[0] == cmd_new[0]) {
-						u8 len = (new_len < tx_len) ? new_len : tx_len;
-						for (int k = 0; k < len; k++) {
-							if (cmd_new[k] != payload[k]) {
-								u8 tmp = payload[k];
-								payload[k] = (u8)cmd_new[k];
-								DSI_INFO("%s: cmd line[%d]: playload[%d] old:%02x, new:%02x", __func__, i, k, tmp, payload[k]);
-							}
-						}
-						cmds->msg.tx_len = len;
-						goto end;
-					}
-					else
-						DSI_INFO("%s: skip different reg for cmd:[%d], reg ori:%02x, new:%02x\n", __func__, i, payload[0], cmd_new[0]);
-
-					continue;
-				}
-			}
-			else if(param_info->value == HBM_OFF_STATE && payload[0] == 0x51) {
-				payload[1] = (lhbm_config->dbv_level&0xff00)>>8;
-				payload[2] = lhbm_config->dbv_level&0xff;
-				DSI_ERR("%s: restore backlight level=%d\n", __func__, lhbm_config->dbv_level);
-				rc =  0;
-				goto end;
-			}
-		  } //lhbm_bl_cmds_enable end
-		  else {
 			if(param_info->value == HBM_FOD_ON_STATE && payload[0] == lhbm_config->alpha_reg) {
 				if(alpha_level >lhbm_config->alpha_size) {
 					DSI_ERR("unsupport dbv level %d on local hbm\n", lhbm_config->dbv_level);
@@ -1482,14 +1445,41 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 				}
 				rc =  0;
 				goto end;
-                        } else if(param_info->value == HBM_OFF_STATE && payload[0] == 0x51) {
+			}
+			else if(param_info->value == HBM_FOD_ON_STATE && lhbm_config->lhbm_bl_cmds_enable) {
+				if(i < lhbm_config->lhbm_bl_cmds_line_diff) {
+					DSI_DEBUG("%s: keep same cmds msg:%d for reg:%02x\n", __func__, i, payload[0]);
+					continue;
+				}
+				else {
+					u8 tx_len = cmds->msg.tx_len;
+					u8 new_len = lhbm_config->lhbm_bl_cmds_len;
+
+					DSI_INFO("%s: payload[0]=%02x, cmd_new[0]=%02x\n", __func__, payload[0], cmd_new[0]);
+					if (payload[0] == cmd_new[0]) {
+						u8 len = (new_len < tx_len) ? new_len : tx_len;
+						for (int k = 0; k < len; k++) {
+							if (cmd_new[k] != payload[k]) {
+								u8 tmp = payload[k];
+								payload[k] = (u8)cmd_new[k];
+								DSI_INFO("%s: cmd line[%d]: playload[%d] old:%02x, new:%02x", __func__, i, k, tmp, payload[k]);
+							}
+						}
+						cmds->msg.tx_len = len;
+
+						if (!lhbm_config->alpha_reg) {
+							DSI_INFO("%s: no alpha reg set, goto end\n", __func__);
+							goto end;
+						}
+					}
+				}
+			} else if(param_info->value == HBM_OFF_STATE && payload[0] == 0x51) {
 				payload[1] = (lhbm_config->dbv_level&0xff00)>>8;
 				payload[2] = lhbm_config->dbv_level&0xff;
                                 DSI_INFO("%s: restore backlight level=%d\n", __func__, lhbm_config->dbv_level);
 				rc =  0;
 				goto end;
 			}
-		  }
 		}
 	}
 
@@ -5285,7 +5275,6 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 					DSI_INFO("%s: get %s\n", __func__, cmds_str);
 			}
 
-			return rc;
 		}
 		else
 		    DSI_DEBUG("%s: qcom,mdss-dsi-panel-local-hbm-bl-cmds-enabled not defined\n", __func__);
