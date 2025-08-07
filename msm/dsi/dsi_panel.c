@@ -1622,7 +1622,7 @@ static int dsi_panel_set_dc(struct dsi_panel *panel,
 	pr_info("Set DC to (%d)\n", param_info->value);
 	if(panel->dc_ignore_config){
 		pr_info("power off ignore config DC");
-		return rc;
+		return 0;
 	}
 	memcpy(&panel->curDCModeParaInfo, param_info, sizeof(struct msm_param_info));
 	rc = dsi_panel_send_param_cmd(panel, param_info);
@@ -1655,8 +1655,8 @@ int dsi_panel_set_param(struct dsi_panel *panel,
         }
 
 	if (panel->panel_trueaod_state) {
-		DSI_ERR("panel in Aod\n");
-		return -EINVAL;
+		DSI_INFO("panel in Aod, skip\n");
+		return 0;
 	}
 
 	DSI_DEBUG("%s+\n", __func__);
@@ -5652,6 +5652,17 @@ static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
 		aod_config->bl_vid_update= utils->read_bool(utils->data,
                     "qcom,mdss-dsi-panel-AOD-bl-vid-update");
 
+		aod_config->bl_vid_cmd_switch2 = utils->read_bool(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-bl-cmd-switch2-en");
+
+		rc = utils->read_u32(utils->data,
+                    "qcom,mdss-dsi-panel-AOD-cmd-out-delay-ms-post",
+                    &(aod_config->cmd_out_post_ms));
+		if (!rc)
+			DSI_INFO("%s:qcom,mdss-dsi-panel-AOD-cmd-out-delay-ms-post set:%d\n", __func__, aod_config->cmd_out_post_ms);
+		else
+			aod_config->cmd_out_post_ms = 0;
+
 		rc = utils->read_u32(utils->data,
                     "qcom,mdss-dsi-panel-AOD-THRESHOLD-min-nit",
                     &(aod_config->min_nit));
@@ -7345,6 +7356,13 @@ int dsi_panel_switch_cmd_mode_out(struct dsi_panel *panel)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_SWITCH_OUT cmds, rc=%d\n",
 		       panel->name, rc);
 
+	if (panel->aod_config.cmd_out_post_ms) {
+		//delay when cmd out to make sure demura reload for video mode
+		int delay_us = panel->aod_config.cmd_out_post_ms * 1000;
+		udelay(delay_us);
+		DSI_INFO("%s: delay %dus for demura reload\n", __func__, delay_us);
+	}
+
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -7358,6 +7376,7 @@ int dsi_panel_switch_video_mode_out(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	DSI_DEBUG("%s: enter\n", __func__);
 	mutex_lock(&panel->panel_lock);
 
 	panel->panel_trueaod_state = true;
@@ -7381,6 +7400,7 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	DSI_INFO("%s: enter\n", __func__);
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VID_SWITCH_IN, false);
@@ -7389,7 +7409,6 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
-	panel->panel_trueaod_state = false;
 
 	if(panel->aod_config.bl_vid_update){
 		if(panel->bl_config.bl_level > 0)
@@ -7399,10 +7418,11 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 		else
 			dsi_panel_set_backlight(panel, panel->bl_config.brightness_default_level);
 
-		DSI_INFO("dsi_panel_switch_video_mode_in update backlight bl_level %d aod_bl_leve %d\n",
+		DSI_INFO("dsi_panel_switch_video_mode_in update backlight bl_level %d aod_bl_level %d\n",
 			panel->bl_config.bl_level,panel->bl_config.aod_bl_level);
 	}
 
+	panel->panel_trueaod_state = false;
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -7420,8 +7440,12 @@ int dsi_panel_switch_cmd_mode_in(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 
 	panel->panel_trueaod_state = true;
-	if(panel->aod_config.aod_powerup)
+	if(panel->aod_config.aod_powerup && panel->aod_config.bl_vid_cmd_switch2) {
 		type = DSI_CMD_SET_CMD_SWITCH_IN2;
+		DSI_INFO("%s: enter, cmd type DSI_CMD_SET_CMD_SWITCH_IN2\n", __func__);
+	}
+	else
+		DSI_INFO("%s: enter\n", __func__);
 
 	if(panel->aod_config.bl_vid_update)
 		dsi_panel_aod_backlight_update(panel, type);

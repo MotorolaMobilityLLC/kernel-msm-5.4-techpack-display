@@ -1942,7 +1942,8 @@ int dsi_display_set_power(struct drm_connector *connector,
 	}else
 		display->panel->aod_config.aod_powerup = false;
 
-	if(power_mode == SDE_MODE_DPMS_OFF)
+	if((power_mode == SDE_MODE_DPMS_OFF)
+			|| (display->panel->aod_config.bl_vid_update && (power_mode == SDE_MODE_DPMS_LP1 || power_mode == SDE_MODE_DPMS_LP2)))
 		display->panel->dc_ignore_config = true;
 	else
 		display->panel->dc_ignore_config = false;

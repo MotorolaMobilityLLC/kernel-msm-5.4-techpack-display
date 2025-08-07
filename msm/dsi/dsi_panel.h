@@ -323,11 +323,13 @@ struct dsi_panel_aod_config {
 	u32 aod_backlight_threshold;
 	bool bl_cmd_update;
 	bool bl_vid_update;
+	bool bl_vid_cmd_switch2;
 	u32 min_nit;
 	u32 hig_nit;
 	u32 min_bl_reg;
 	u32 mid_bl_reg;
 	u32 hig_bl_reg;
+	u32 cmd_out_post_ms;
 	bool aod_powerup;
 	bool cmd_resend;
 };
