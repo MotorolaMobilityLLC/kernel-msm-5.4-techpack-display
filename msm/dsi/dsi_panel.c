@@ -5314,9 +5314,13 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 			"qcom,mdss-dsi-panel-local-hbm-alpha-size",
 			&(lhbm_config->alpha_size));
 		if (rc) {
-			DSI_ERR("%s:%d, Unable to read local hbm alpha size, rc:%u\n",
-				__func__, __LINE__, rc);
-			lhbm_config->enable = false;
+			if (lhbm_config->lhbm_bl_cmds_enable)
+				DSI_INFO("lhbm alpha size not set, skip\n");
+			else {
+				DSI_ERR("%s:%d, Unable to read local hbm alpha size, rc:%u\n",
+					__func__, __LINE__, rc);
+				lhbm_config->enable = false;
+			}
 			return rc;
 		}
 
