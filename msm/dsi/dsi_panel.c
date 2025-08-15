@@ -6893,6 +6893,7 @@ int dsi_panel_update_pps(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	DSI_INFO("%s: enter\n", __func__);
 	mutex_lock(&panel->panel_lock);
 
 	priv_info = panel->cur_mode->priv_info;
@@ -7346,6 +7347,7 @@ int dsi_panel_switch_cmd_mode_out(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	DSI_INFO("%s: enter\n", __func__);
 	mutex_lock(&panel->panel_lock);
 
 	panel->panel_trueaod_state = true;
@@ -7376,7 +7378,7 @@ int dsi_panel_switch_video_mode_out(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
-	DSI_DEBUG("%s: enter\n", __func__);
+	DSI_INFO("%s: enter\n", __func__);
 	mutex_lock(&panel->panel_lock);
 
 	panel->panel_trueaod_state = true;
