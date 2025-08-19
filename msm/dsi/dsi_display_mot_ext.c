@@ -1801,6 +1801,25 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 				payload[2] = update_backlight_reg & 0xFF;
 				pr_info("[%s] update aod backlight reg: payload[1]=0x%02X payload[2]=0x%02X\n", panel->name, payload[1], payload[2] );
 			}
+		} else if(type == DSI_CMD_SET_CMD_SWITCH_OUT) {
+			/* On QC platform, need restore the normal mode backlight brightness while exit aod mode.
+			   Plese add a '51' commond line on 'qcom,cmd-mode-switch-out-commands' for this restore,
+			   for example, '39 00 00 00 00 00 03 51 19 1a'
+			   Note: dtsi 51 should be with a default level to avoid the black screen issue sometimes exit from AOD.
+			*/
+			if(payload[0] == 0x51) {
+				bl_level = 0;
+				if(panel->bl_config.bl_level > 0)
+					bl_level = panel->bl_config.bl_level;
+				else if(panel->bl_config.aod_bl_level > 0)
+					bl_level = panel->bl_config.aod_bl_level;
+				if(bl_level) {
+					payload[1] = (bl_level & 0xFF00) >> 8;
+					payload[2] = bl_level & 0xFF;
+					pr_info("[%s] restore backlight from aod : %02X => [0x%02X%02X]\n",
+						panel->name, payload[0], payload[1],payload[2] );
+				}
+			}
 		}
 
 		cmds++;

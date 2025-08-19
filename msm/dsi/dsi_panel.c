@@ -7351,6 +7351,10 @@ int dsi_panel_switch_cmd_mode_out(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 
 	panel->panel_trueaod_state = true;
+
+	if(panel->aod_config.bl_vid_update)
+		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_SWITCH_OUT);
+
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_OUT, false);
 	if (panel->aod_config.cmd_resend)
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_SWITCH_OUT, false);
@@ -7411,18 +7415,6 @@ int dsi_panel_switch_video_mode_in(struct dsi_panel *panel)
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_VID_SWITCH_IN cmds, rc=%d\n",
 		       panel->name, rc);
-
-	if(panel->aod_config.bl_vid_update){
-		if(panel->bl_config.bl_level > 0)
-			dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
-		else if(panel->bl_config.aod_bl_level > 0)
-			dsi_panel_set_backlight(panel, panel->bl_config.aod_bl_level);
-		else
-			dsi_panel_set_backlight(panel, panel->bl_config.brightness_default_level);
-
-		DSI_INFO("dsi_panel_switch_video_mode_in update backlight bl_level %d aod_bl_level %d\n",
-			panel->bl_config.bl_level,panel->bl_config.aod_bl_level);
-	}
 
 	panel->panel_trueaod_state = false;
 	mutex_unlock(&panel->panel_lock);
