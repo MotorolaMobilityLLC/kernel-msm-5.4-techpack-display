@@ -1413,11 +1413,19 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 		if(lhbm_config->bl_num > 0)
 			alpha_level = lhbm_config->dbv_level/lhbm_config->bl_num;
 		else{
-			bl_num = panel->bl_config.bl_max_level/(lhbm_config->alpha_size - 1);
-			if(bl_num > 1)
-				alpha_level = lhbm_config->dbv_level/bl_num;
-			else
-				alpha_level = lhbm_config->dbv_level;
+			if (lhbm_config->alpha_same_high_level) {
+				if (lhbm_config->dbv_level >= lhbm_config->alpha_size)
+					alpha_level = lhbm_config->alpha_size - 1;
+				else
+					alpha_level = lhbm_config->dbv_level;
+			}
+			else {
+				bl_num = panel->bl_config.bl_max_level/(lhbm_config->alpha_size - 1);
+				if(bl_num > 1)
+					alpha_level = lhbm_config->dbv_level/bl_num;
+				else
+					alpha_level = lhbm_config->dbv_level;
+			}
 		}
 
 		for (i =0; i < count; i++, cmds++) {
@@ -5240,6 +5248,11 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 			DSI_ERR("%s:qcom,mdss-dsi-panel-bl-num is not defined, set it to 0\n", __func__);
 			lhbm_config->bl_num = 0;
 		}
+
+		lhbm_config->alpha_same_high_level = utils->read_bool(utils->data,
+			"qcom,mdss-dsi-panel-local-hbm-alpha-same-high-level");
+		if (lhbm_config->alpha_same_high_level)
+			DSI_INFO("%s: alpha_same_high_level set 1\n", __func__);
 
 		lhbm_config->lhbm_bl_cmds_enable = utils->read_bool(utils->data,
 			"qcom,mdss-dsi-panel-local-hbm-bl-cmds-enabled");
