@@ -173,15 +173,6 @@ struct dsi_backlight_config {
 	u32 brightness;
 	u32 brightness_default_level;
 	u32 bl_level;
-	u32 last_bl_level;
-	struct dsi_bl_dimming_seq *bl_off_dimming_seq;
-	u32 bl_off_count;
-	bool bl_off_enabled;
-	u32 bl_off_threshold;
-	struct dsi_bl_dimming_seq *bl_on_dimming_seq;
-	u32 bl_on_count;
-	bool bl_on_enabled;
-	u32 bl_on_threshold;
 	u32 bl_scale;
 	u32 bl_scale_sv;
 	u32 bl_dcs_subtype;
@@ -216,11 +207,6 @@ struct dsi_backlight_config {
 };
 
 struct dsi_reset_seq {
-	u32 level;
-	u32 sleep_ms;
-};
-
-struct dsi_bl_dimming_seq {
 	u32 level;
 	u32 sleep_ms;
 };
