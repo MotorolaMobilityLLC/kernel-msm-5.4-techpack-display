@@ -1082,8 +1082,13 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
 		return -EINVAL;
 	}
 
+	panel->apl_config.apl_bl_set = 0;
 	if(bl_lvl > panel->apl_config.apl_threshold && !panel->apl_config.apl_state && panel->apl_config.dobly_enable == 0){
 		apl_cmd = &panel->apl_config.apl_cmd_on;
+		if (panel->apl_config.apl_bl_update) {
+			dsi_panel_apl_backlight_update(panel, apl_cmd);
+			pr_debug("%s: apl on with backlight\n", __func__);
+		}
 		rc = dsi_panel_tx_send_mot_cmd(panel, apl_cmd);
 		panel->apl_config.apl_state = true;
 		DSI_INFO("apl config apl_config.apl_threshold = %d apl_config.apl_state =%d,bl_lvl = %d\n",
@@ -1091,6 +1096,10 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
 	}
 	else if(bl_lvl <= panel->apl_config.apl_threshold && panel->apl_config.apl_state){
 		apl_cmd = &panel->apl_config.apl_cmd_off;
+		if (panel->apl_config.apl_bl_update) {
+			dsi_panel_apl_backlight_update(panel, apl_cmd);
+			pr_debug("%s: apl off with backlight\n", __func__);
+		}
 		rc = dsi_panel_tx_send_mot_cmd(panel, apl_cmd);
 		panel->apl_config.apl_state = false;
 		DSI_INFO("apl config apl_config.apl_threshold = %d apl_config.apl_state =%d,bl_lvl = %d\n",
@@ -1127,7 +1136,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	case DSI_BACKLIGHT_DCS:
 		if(panel->apl_config.enable)
 			rc = dsi_panel_set_apl(panel, bl_lvl);
-		rc = dsi_panel_update_backlight(panel, bl_lvl);
+		if (panel->apl_config.apl_bl_update && panel->apl_config.apl_bl_set)
+			pr_debug("dsi: backlight set with apl cmds, skip\n");
+		else
+			rc = dsi_panel_update_backlight(panel, bl_lvl);
 		break;
 	case DSI_BACKLIGHT_DUMMY:
 		rc = 0;
@@ -1584,6 +1596,12 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel,
 		     DSI_INFO("Ignor bl_level %u as panel is not init.\n",(u32)bl_lvl);
 			rc = -EINVAL;
 			goto error;
+		}
+
+		if ((HBM_ON_STATE == param_info->value) && panel->apl_config.apl_bl_update) {
+			panel->apl_config.apl_state = true;
+			panel->apl_config.apl_bl_set = true;
+			pr_debug("%s: HBM on for apl, bl_lvl:%d, set apl_state:%d, apl_bl_set:%d\n", __func__, bl_lvl, panel->apl_config.apl_state, panel->apl_config.apl_bl_set);
 		}
 
 		rc = dsi_panel_set_backlight(panel, bl_lvl);
@@ -5547,6 +5565,20 @@ static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 		DSI_ERR("%s:qcom,mdss-dsi-panel-APL-THRESHOLD-BL is not defined, set it to 0\n", __func__);
 		apl_config->apl_threshold = 0;
 		goto error;
+	}
+
+	apl_config->apl_bl_update = utils->read_bool(utils->data, "qcom,mdss-dsi-panel-apl-with-backlight");
+	if (apl_config->apl_bl_update) {
+		DSI_DEBUG("%s:qcom,mdss-dsi-panel-apl-with-backlight enabled\n", __func__);
+		rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-apl-bl-pos", &(apl_config->apl_bl_pos));
+		if (rc)
+			DSI_WARN("panel apl bl reg position not set\n");
+
+		rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-apl-reg", &(apl_config->apl_reg));
+		if (rc) {
+			apl_config->apl_bl_update = false;
+			DSI_ERR("%s: unable read apl reg, rc:%u\n", __func__, rc);
+		}
 	}
 
 	rc = utils->read_u32(utils->data,

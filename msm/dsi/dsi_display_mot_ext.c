@@ -1826,3 +1826,49 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 	}
 }
 
+void dsi_panel_apl_backlight_update(struct dsi_panel *panel, struct dsi_panel_cmd_set *apl_cmd) {
+	struct dsi_cmd_desc *cmds;
+	u8 *payload;
+	u32 count;
+	int i = 0;
+	int bl_level;
+	u32 bl_pos;
+
+	if (!panel || !apl_cmd)
+		return;
+
+	bl_pos = panel->apl_config.apl_bl_pos;
+	if (!bl_pos) {
+		pr_warn("%s: unknown apl bl pos, skip\n", __func__);
+		return;
+	}
+
+	cmds = apl_cmd->cmds;
+	count = apl_cmd->count;
+
+	if (count == 0) {
+		DSI_ERR("%s: apl commands count 0\n", __func__);
+		return;
+	}
+
+	bl_level = panel->bl_config.bl_level;
+	for (i = 0; i < count; i++) {
+		int tx_len = cmds->msg.tx_len;
+
+		payload = (u8 *)cmds->msg.tx_buf;
+		if (payload[0] == panel->apl_config.apl_reg) {
+			if (tx_len < (bl_pos + 1)) {
+				pr_warn("%s: bl_pos:%d exceed cmd len:%d, skip\n", __func__, bl_pos, tx_len);
+				break;
+			}
+			payload[bl_pos] = (bl_level & 0xFF00) >> 8;
+			payload[bl_pos+1] = bl_level & 0xFF;
+			panel->apl_config.apl_bl_set = 1;
+			pr_info("%s: update apl bl payload[%d]=0x%02X payload[%d]=0x%02X\n", __func__, bl_pos, payload[bl_pos], bl_pos+1, payload[bl_pos+1]);
+			break;
+		}
+		cmds++;
+	}
+
+	return;
+}
