@@ -1188,9 +1188,11 @@ static int sde_encoder_phys_wb_atomic_check(struct sde_encoder_phys *phys_enc,
 	struct sde_rect wb_roi;
 	u32 out_width = 0, out_height = 0;
 	const struct drm_display_mode *mode = &crtc_state->mode;
-	int rc;
-	bool clone_mode_curr = false;
+	int rc, i;
+	bool clone_mode_curr = false, cwb_enc_disable_pending = false;
 	enum sde_wb_rot_type rotation_type;
+	struct sde_encoder_virt *sde_enc;
+	u32 sleep = 16000 / 20;
 
 	SDE_DEBUG("[enc:%d wb:%d] atomic_check:\"%s\",%d,%d]\n", DRMID(phys_enc->parent),
 			WBID(wb_enc), mode->name, mode->hdisplay, mode->vdisplay);
@@ -1205,8 +1207,29 @@ static int sde_encoder_phys_wb_atomic_check(struct sde_encoder_phys *phys_enc,
 		return -EINVAL;
 	}
 
+	sde_enc = to_sde_encoder_virt(phys_enc->parent);
 	sde_conn_state = to_sde_connector_state(conn_state);
 	clone_mode_curr = phys_enc->in_clone_mode;
+
+	mutex_lock(&sde_enc->enc_lock);
+	if (sde_enc->crtc && crtc_state->crtc) {
+		if (sde_enc->crtc->base.id != crtc_state->crtc->base.id)
+			cwb_enc_disable_pending = true;
+	}
+	mutex_unlock(&sde_enc->enc_lock);
+
+	if (cwb_enc_disable_pending) {
+		for (i = 0; i < 20; i++) {
+			usleep_range(sleep, sleep * 2);
+
+			mutex_lock(&sde_enc->enc_lock);
+			cwb_enc_disable_pending = sde_enc->crtc ? true: false;
+			mutex_unlock(&sde_enc->enc_lock);
+
+			if (!cwb_enc_disable_pending)
+				break;
+		}
+	}
 
 	_sde_enc_phys_wb_detect_cwb(phys_enc, crtc_state);
 
