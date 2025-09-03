@@ -270,6 +270,15 @@ struct drm_panel_cellid_config {
 	u8 *return_buf;
 };
 
+struct drm_panel_pcd_config {
+	bool pcd_reg_enabled;
+	struct dsi_panel_cmd_set pcd_reg_cmd;
+	u32 pcd_reg_rlen;
+	u32 pcd_reg_offset;
+	u32 pcd_reg_mask;
+	u8 *return_buf;
+};
+
 struct dsi_panel_spr_info {
 	bool enable;
 	enum msm_display_spr_pack_type pack_type;
@@ -487,6 +496,7 @@ struct dsi_panel {
 	bool rm690a0_backlight_config;
 	bool check_pcd;
 	int panelPcdCheck_enable;
+	struct drm_panel_pcd_config pcd_config;
 	bool panel_trueaod_state;
 	bool deep_standby_need_twice_reset;
 };
@@ -645,6 +655,7 @@ int dsi_panel_dfps_send_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type);
+int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel);
 void set_panelpcdcheck_enable(struct dsi_panel *panel);
 
 #endif /* _DSI_PANEL_H_ */
