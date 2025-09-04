@@ -5774,6 +5774,20 @@ static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
 
 	pcd_config->check_before_read = utils->read_bool(utils->data, "qcom,pcd-reg-check-before-read");
 
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-min",
+		&(pcd_config->pcd_reg_pass_min));
+	if (rc)
+		pcd_config->pcd_reg_pass_min = 0;
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-max",
+		&(pcd_config->pcd_reg_pass_max));
+	if (rc) {
+		pcd_config->pcd_reg_pass_max = 0;
+		DSI_WARN("%s:warn: qcom,mdss-dsi-panel-pcd-reg-pass-max not set\n", __func__);
+	}
+	else
+		pcd_config->pcd_reg_status = 1;  //If a max value is configured, the PCD check is considered active. Default status is OK.
+
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-array-size",
 		&(pcd_config->pcd_reg_pass_array_size));
 	if (rc || !pcd_config->pcd_reg_pass_array_size) {
@@ -5786,7 +5800,7 @@ static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
 		pcd_config->pcd_reg_pass_array, pcd_config->pcd_reg_pass_array_size);
 	if (rc) {
 		pcd_config->pcd_reg_pass_array_size = 0;
-		DSI_ERR("%s:qcom,mdss-dsi-panel-pcd-reg-pass-array get fail\n", __func__);
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-pass-array not set\n", __func__);
 	}
 	else
 		pcd_config->pcd_reg_status = 1;  //set 1 for default OK status when pass array set
@@ -8666,11 +8680,6 @@ int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel)
 		goto error;
 	}
 
-	if (panel->panel_trueaod_state) {
-		DSI_INFO("%s: panel in aod, skip\n", __func__);
-		return 0;
-	}
-
 	dsi_panel_acquire_panel_lock(panel);
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
@@ -8708,11 +8717,6 @@ void set_panelpcdcheck_enable(struct dsi_panel *panel, bool check_en)
 
 	if (!panel) {
 		DSI_ERR("Invalid params\n");
-	}
-
-	if (panel->panel_trueaod_state) {
-		DSI_INFO("%s:dsi: panel in aod, skip\n", __func__);
-		return;
 	}
 
 	mutex_lock(&panel->panel_lock);
@@ -8775,28 +8779,50 @@ void dsi_panel_parse_pcd_status(struct dsi_panel *panel) {
 
 	//parser panel status
 	panel->pcd_config.pcd_reg_status = 0;
-	for(int i = 0; i < panel->pcd_config.pcd_reg_pass_array_size; i++) {
-		if (panel->pcd_config.pcd_reg_val == panel->pcd_config.pcd_reg_pass_array[i]) {
+	if (panel->pcd_config.pcd_reg_pass_max) {
+		if ((panel->pcd_config.pcd_reg_val >= panel->pcd_config.pcd_reg_pass_min)
+				&& (panel->pcd_config.pcd_reg_val <= panel->pcd_config.pcd_reg_pass_max)) {
+			//valid reg
 			panel->pcd_config.pcd_reg_status = 1;
-			break;
 		}
+		else {
+			//NG
+			pr_warn("%s: warn: abnormal pcd reg val:0x%02x, max:0x%02x, min:0x%02x\n", __func__,
+						panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_pass_max, panel->pcd_config.pcd_reg_pass_min);
+		}
+	}
+	else if (panel->pcd_config.pcd_reg_pass_array_size) {
+		for(int i = 0; i < panel->pcd_config.pcd_reg_pass_array_size; i++) {
+			if (panel->pcd_config.pcd_reg_val == panel->pcd_config.pcd_reg_pass_array[i]) {
+				//valid reg
+				panel->pcd_config.pcd_reg_status = 1;
+				break;
+			}
+		}
+	}
+	else {
+		pr_info("%s: not set reg pass check values, return\n", __func__);
 	}
 
 	if (panel->pcd_config.pcd_reg_status) {
+		//valid reg status 1
 		panel->pcd_config.retry_count = 0;
 		pr_info("%s: panel pcd reg: 0x%02x, hw status:%d ok\n", __func__, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status);
 	}
 	else if (panel->pcd_config.pcd_reg_val) {
+		//NG reg value, set status 0xFF
 		panel->pcd_config.pcd_reg_status = 0xFF;
 		panel->pcd_config.retry_count = 0;
 		pr_info("%s: warn: abnormal panel pcd reg: 0x%02x, hw status:%d\n", __func__, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status);
 	}
 	else {
+		//get 0 and not valid reg, retry check
 		if (panel->pcd_config.retry_count < PCD_REG_CHECK_RETRY_MAX) {
 			panel->pcd_config.retry_count++;
 			pr_info("%s: warn: fail get panel pcd reg: 0x%02x, hw status:%d. retry:%d\n",
 						__func__, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status, panel->pcd_config.retry_count);
 		} else {
+			//get 0 but retry max, stop retry in this session. set reg_status 0
 			panel->pcd_config.pcd_reg_status = 0;
 			pr_info("%s: warn: retry:%d fail get panel pcd reg: 0x%02x, hw status:%d\n",
 						__func__, panel->pcd_config.retry_count, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status);
@@ -8874,10 +8900,6 @@ int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get)
 			}
 		}
 
-		if (panel->panel_trueaod_state) {
-			DSI_INFO("%s: panel in aod, skip\n", __func__);
-			return 0;
-		}
 		dsi_panel_tx_pcd_reg_cmd(panel);
 
 		//get pcd reg val
