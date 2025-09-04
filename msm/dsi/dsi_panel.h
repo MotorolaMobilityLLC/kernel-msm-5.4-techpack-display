@@ -286,6 +286,8 @@ struct drm_panel_pcd_config {
 	u32 pcd_reg_val;
 	u32 pcd_reg_pass_array[PCD_REG_MAX_PASS_COUNT];
 	u32 pcd_reg_pass_array_size;
+	u32 pcd_reg_pass_min;
+	u32 pcd_reg_pass_max;
 	u32 pcd_reg_read_delay_ms;
 	u32 check_seq_count;	//screen on count
 	u32 check_seq_interval;
