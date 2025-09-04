@@ -1508,7 +1508,7 @@ static int dsi_panel_set_acl(struct dsi_panel *panel,
 	pr_info("Set ACL to (%d)\n", param_info->value);
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0)
-		DSI_ERR("%s: failed to send param cmds. ret=%d\n", __func__, rc);
+		DSI_WARN("%s: failed to send param cmds. ret=%d\n", __func__, rc);
 
         return rc;
 };
