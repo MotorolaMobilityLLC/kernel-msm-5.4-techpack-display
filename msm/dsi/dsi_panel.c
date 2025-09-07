@@ -1002,6 +1002,14 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	int rc = 0;
 	struct dsi_backlight_config *bl = &panel->bl_config;
 
+	u32 level = 0;
+	u32 sleep_ms = 0;
+	u32 backlight_off_threshold = 0;
+	u32 backlight_on_threshold = 0;
+	int last_level = 0;
+	int i = 0;
+	int count = 0;
+
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 
@@ -1030,8 +1038,35 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	case DSI_BACKLIGHT_I2C:
 		if (!(bl->i2c_bd))
 			bl->i2c_bd = backlight_device_get_by_type(BACKLIGHT_PLATFORM);
-		else
+		else{
+			last_level = bl->last_bl_level;
+			if(bl->bl_off_enabled){
+				backlight_off_threshold = bl->bl_off_threshold;
+				if(last_level > backlight_off_threshold && bl_lvl == 0){
+					count = bl->bl_off_count;
+					for (i = 0; i < count; i++){
+						level = bl->bl_off_dimming_seq[i].level;
+						sleep_ms = bl->bl_off_dimming_seq[i].sleep_ms;
+						rc = backlight_device_set_brightness(bl->i2c_bd, level);
+						mdelay(sleep_ms);
+					}
+				}
+			}
+			if(bl->bl_on_enabled){
+				backlight_on_threshold = bl->bl_on_threshold;
+				if(last_level == 0 && bl_lvl > backlight_on_threshold){
+					count = bl->bl_on_count;
+					for (i = 0; i < count; i++){
+						level = bl->bl_on_dimming_seq[i].level;
+						sleep_ms = bl->bl_on_dimming_seq[i].sleep_ms;
+						rc = backlight_device_set_brightness(bl->i2c_bd, level);
+						mdelay(sleep_ms);
+					}
+				}
+			}
 			rc = backlight_device_set_brightness(bl->i2c_bd, bl_lvl);
+			bl->last_bl_level = bl_lvl;
+		}
 		break;
 	default:
 		DSI_ERR("Backlight type(%d) not supported\n", bl->type);
@@ -3213,6 +3248,192 @@ error:
 	return rc;
 }
 
+static int dsi_panel_parse_bl_off_dimming_sequence(struct dsi_panel *panel)
+{
+	int rc = 0;
+	int i;
+	u32 length = 0;
+	u32 count = 0;
+	u32 size = 0;
+	u32 backlight_off_threshold = 0;
+	u32 *arr_32 = NULL;
+	const u32 *arr;
+	struct dsi_parser_utils *utils = NULL;
+	struct dsi_bl_dimming_seq *seq = NULL;
+
+	if (!panel) {
+		DSI_ERR("Invalid params\n");
+		return -EINVAL;
+	}
+	utils = &panel->utils;
+
+	panel->bl_config.bl_off_enabled =
+		utils->read_bool(utils->data, "qcom,mdss-dsi-backlight-off-dimming-enabled");
+	if(!panel->bl_config.bl_off_enabled) {
+		goto error;
+	}
+
+	DSI_DEBUG("%s: mdss-dsi-backlight-off-dimming feature %s\n", __func__,
+		(panel->bl_config.bl_off_enabled ? "enabled" : "disabled"));
+
+	rc = utils->read_u32(utils->data,
+				"qcom,mdss-dsi-backlight-off-threshold",
+				  &backlight_off_threshold);
+	if (rc) {
+		DSI_ERR("failed to read qcom,mdss-dsi-backlight-off-threshold, rc=%d\n",
+		       rc);
+		goto error;
+	}
+	panel->bl_config.bl_off_threshold = backlight_off_threshold;
+	arr = utils->get_property(utils->data,
+			"qcom,mdss-dsi-backlight-off-dimming", &length);
+	if (!arr) {
+		DSI_ERR("[%s] dsi-backlight-off-dimming not found\n", panel->name);
+		rc = -EINVAL;
+		goto error;
+	}
+	if (length & 0x1) {
+		DSI_ERR("[%s] syntax error for dsi-backlight-off-dimming\n",
+		       panel->name);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	DSI_DEBUG("DIMMING SEQ LENGTH = %d\n", length);
+	length = length / sizeof(u32);
+
+	size = length * sizeof(u32);
+
+	arr_32 = kzalloc(size, GFP_KERNEL);
+	if (!arr_32) {
+		rc = -ENOMEM;
+		goto error;
+	}
+
+	rc = utils->read_u32_array(utils->data, "qcom,mdss-dsi-backlight-off-dimming",
+					arr_32, length);
+	if (rc) {
+		DSI_ERR("[%s] cannot read backlight-off-dimming-seqience\n", panel->name);
+		goto error_free_arr_32;
+	}
+
+	count = length / 2;
+	size = count * sizeof(*seq);
+	seq = kzalloc(size, GFP_KERNEL);
+	if (!seq) {
+		rc = -ENOMEM;
+		goto error_free_arr_32;
+	}
+
+	panel->bl_config.bl_off_dimming_seq = seq;
+	panel->bl_config.bl_off_count = count;
+
+	for (i = 0; i < length; i += 2) {
+		seq->level = arr_32[i];
+		seq->sleep_ms = arr_32[i + 1];
+		seq++;
+	}
+
+
+error_free_arr_32:
+	kfree(arr_32);
+error:
+	return rc;
+}
+
+static int dsi_panel_parse_bl_on_dimming_sequence(struct dsi_panel *panel)
+{
+	int rc = 0;
+	int i;
+	u32 length = 0;
+	u32 count = 0;
+	u32 size = 0;
+	u32 backlight_on_threshold = 0;
+	u32 *arr_32 = NULL;
+	const u32 *arr;
+	struct dsi_parser_utils *utils = NULL;
+	struct dsi_bl_dimming_seq *seq = NULL;
+
+	if (!panel) {
+		DSI_ERR("Invalid params\n");
+		return -EINVAL;
+	}
+	utils = &panel->utils;
+
+	panel->bl_config.bl_on_enabled =
+		utils->read_bool(utils->data, "qcom,mdss-dsi-backlight-on-dimming-enabled");
+	if(!panel->bl_config.bl_on_enabled) {
+		goto error;
+	}
+
+	DSI_DEBUG("%s: mdss-dsi-backlight-on-dimming feature %s\n", __func__,
+		(panel->bl_config.bl_on_enabled ? "enabled" : "disabled"));
+
+	rc = utils->read_u32(utils->data,
+				"qcom,mdss-dsi-backlight-on-threshold",
+				  &backlight_on_threshold);
+	if (rc) {
+		DSI_ERR("failed to read qcom,mdss-dsi-backlight-on-threshold, rc=%d\n",
+		       rc);
+		goto error;
+	}
+	panel->bl_config.bl_on_threshold = backlight_on_threshold;
+	arr = utils->get_property(utils->data,
+			"qcom,mdss-dsi-backlight-on-dimming", &length);
+	if (!arr) {
+		DSI_ERR("[%s] dsi-backlight-on-dimming not found\n", panel->name);
+		rc = -EINVAL;
+		goto error;
+	}
+	if (length & 0x1) {
+		DSI_ERR("[%s] syntax error for dsi-backlight-on-dimming\n",
+		       panel->name);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	DSI_DEBUG("DIMMING SEQ LENGTH = %d\n", length);
+	length = length / sizeof(u32);
+
+	size = length * sizeof(u32);
+
+	arr_32 = kzalloc(size, GFP_KERNEL);
+	if (!arr_32) {
+		rc = -ENOMEM;
+		goto error;
+	}
+
+	rc = utils->read_u32_array(utils->data, "qcom,mdss-dsi-backlight-on-dimming",
+					arr_32, length);
+	if (rc) {
+		DSI_ERR("[%s] cannot read backlight-on-dimming-seqience\n", panel->name);
+		goto error_free_arr_32;
+	}
+
+	count = length / 2;
+	size = count * sizeof(*seq);
+	seq = kzalloc(size, GFP_KERNEL);
+	if (!seq) {
+		rc = -ENOMEM;
+		goto error_free_arr_32;
+	}
+
+	panel->bl_config.bl_on_dimming_seq = seq;
+	panel->bl_config.bl_on_count = count;
+
+	for (i = 0; i < length; i += 2) {
+		seq->level = arr_32[i];
+		seq->sleep_ms = arr_32[i + 1];
+		seq++;
+	}
+
+
+error_free_arr_32:
+	kfree(arr_32);
+error:
+	return rc;
+}
+
 static int dsi_panel_parse_misc_features(struct dsi_panel *panel)
 {
 	struct dsi_parser_utils *utils = &panel->utils;
@@ -3553,6 +3774,20 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 	const char *state = NULL;
 	struct dsi_parser_utils *utils = &panel->utils;
 	char *bl_name = NULL;
+
+	rc = dsi_panel_parse_bl_off_dimming_sequence(panel);
+	if (rc) {
+		DSI_DEBUG("[%s] failed to parse bl off dimming sequence, rc=%d\n",
+		       panel->name, rc);
+		rc = 0;
+	}
+
+	rc = dsi_panel_parse_bl_on_dimming_sequence(panel);
+	if (rc) {
+		DSI_DEBUG("[%s] failed to parse bl on dimming sequence, rc=%d\n",
+		       panel->name, rc);
+		rc = 0;
+	}
 
 	if (!strcmp(panel->type, "primary"))
 		bl_name = "qcom,mdss-dsi-bl-pmic-control-type";
