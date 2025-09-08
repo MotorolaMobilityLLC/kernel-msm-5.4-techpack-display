@@ -5045,6 +5045,8 @@ static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
 
 	pcd_config->check_before_read = utils->read_bool(utils->data, "qcom,pcd-reg-check-before-read");
 
+	pcd_config->pcd_value_2bytes = utils->read_bool(utils->data, "qcom,mdss-dsi-panel-pcd-value-2bytes");
+
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-min",
 		&(pcd_config->pcd_reg_pass_min));
 	if (rc)
@@ -7677,9 +7679,14 @@ int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get)
 								 (pcd_reg_len -1) : panel->pcd_config.pcd_reg_offset;
 
 		value = pcd_reg[offset];
+		if (panel->pcd_config.pcd_value_2bytes && (pcd_reg_len > 1)
+			&& (offset < (pcd_reg_len-1))) {
+			value = pcd_reg[offset] <<8 | pcd_reg[offset+1];
+		}
+
 		if (panel->pcd_config.pcd_reg_mask) {
 			value = value & panel->pcd_config.pcd_reg_mask;
-			pr_debug("%s: pcd[%d]:0x%02x & 0x%02x = 0x%02x", __func__, offset, pcd_reg[offset], panel->pcd_config.pcd_reg_mask, value);
+			pr_info("%s: pcd[%d]:0x%02x & 0x%02x = 0x%02x", __func__, offset, pcd_reg[offset], panel->pcd_config.pcd_reg_mask, value);
 		}
 		panel->pcd_config.pcd_reg_val = value;
 
