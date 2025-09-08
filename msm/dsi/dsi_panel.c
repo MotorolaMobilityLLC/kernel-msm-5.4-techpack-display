@@ -991,7 +991,6 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	unsigned long mode_flags = 0;
 	struct mipi_dsi_device *dsi = NULL;
 	struct dsi_backlight_config *bl = &panel->bl_config;
-	u32 bl_lvl_2bytes;
 	bool isFirstPositive = false;
 
 	if (!panel || (bl_lvl > 0xffff)) {
@@ -1015,11 +1014,12 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	if (panel->bl_config.bl_dcs_subtype)
 		rc = mipi_dsi_dcs_subtype_set_display_brightness(dsi,
 			bl_lvl, panel->bl_config.bl_dcs_subtype);
-        else if (bl->bl_2bytes_enable){
-                bl_lvl_2bytes =  ((bl_lvl & 0xff00) >> 8) | ((bl_lvl & 0xff) << 8);
-                rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl_2bytes);
-        }
-	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
+	else{
+		if (bl->bl_2bytes_enable)
+		    bl_lvl = ((bl_lvl & 0xff00) >> 8) | ((bl_lvl & 0xff) << 8);
+		pr_info("set_backlight wirte lvl:%d\n", panel->bl_config.brightness_updated);
+		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
+    }
 
        // Workaround for the panel which failed to set the first postive brightness value
 	if (panel->bl_config.bl_double_write && isFirstPositive) {
