@@ -6955,10 +6955,11 @@ static ssize_t panelPcdValue_show(struct device *device,
 	}
 
 	panel = dsi_display->panel;
-	rc = dsi_panel_read_pcd_reg(panel, true);
-	if (!rc)
-		len += snprintf(buf + len, PAGE_SIZE - len, "%02x", panel->pcd_config.pcd_reg_val);
-
+	if (panel->pcd_config.pcd_reg_enabled) {
+		rc = dsi_panel_read_pcd_reg(panel, true);
+		if (!rc)
+			len += snprintf(buf + len, PAGE_SIZE - len, "%02x", panel->pcd_config.pcd_reg_val);
+	}
 	return len;
 }
 
