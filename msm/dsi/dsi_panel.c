@@ -1550,6 +1550,12 @@ static int dsi_panel_set_dc(struct dsi_panel *panel,
 		panel->dc_on = true;
 	else
 		panel->dc_on = false;
+
+	if (panel->dc_ignore_config) {
+		pr_info("power off ignore config DC");
+		return 0;
+	}
+
 	memcpy(&panel->curDCModeParaInfo, param_info, sizeof(struct msm_param_info));
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0)

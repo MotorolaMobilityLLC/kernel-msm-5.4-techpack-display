@@ -1855,6 +1855,13 @@ int dsi_display_set_power(struct drm_connector *connector,
 		return -EINVAL;
 	}
 
+	if(power_mode == SDE_MODE_DPMS_OFF)
+		display->panel->dc_ignore_config = true;
+	else
+		display->panel->dc_ignore_config = false;
+	DSI_INFO("dsi_display_set_power power_mode = %d display->panel->dc_ignore_config = %d\n",
+		power_mode,display->panel->dc_ignore_config);
+
 	if (display->panel->pcd_config.pcd_reg_enabled
 			&& (SDE_MODE_DPMS_ON == power_mode)) {
 		display->panel->pcd_config.check_seq_count++;

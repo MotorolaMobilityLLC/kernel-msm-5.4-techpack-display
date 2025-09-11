@@ -518,6 +518,7 @@ struct dsi_panel {
 	int panelPcdCheck_enable;
 	struct drm_panel_pcd_config pcd_config;
 	bool panel_trueaod_state;
+	bool dc_ignore_config;
 	bool deep_standby_need_twice_reset;
 };
 
