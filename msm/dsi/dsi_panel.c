@@ -1491,7 +1491,7 @@ static int dsi_panel_set_local_hbm_param(struct dsi_panel *panel,
 							if (cmd_new[k] != payload[k]) {
 								u8 tmp = payload[k];
 								payload[k] = (u8)cmd_new[k];
-								DSI_INFO("%s: cmd line[%d]: playload[%d] old:%02x, new:%02x", __func__, i, k, tmp, payload[k]);
+								DSI_INFO("%s: cmd line[%d]: payload[%d] old:%02x, new:%02x", __func__, i, k, tmp, payload[k]);
 							}
 						}
 						cmds->msg.tx_len = len;
@@ -7470,7 +7470,7 @@ int dsi_panel_switch_cmd_mode_out(struct dsi_panel *panel)
 		//delay when cmd out to make sure demura reload for video mode
 		int delay_us = panel->aod_config.cmd_out_post_ms * 1000;
 		udelay(delay_us);
-		DSI_INFO("%s: delay %dus for demura reload\n", __func__, delay_us);
+		DSI_INFO("%s: delay %dms for demura reload\n", __func__, panel->aod_config.cmd_out_post_ms);
 	}
 
 	mutex_unlock(&panel->panel_lock);
@@ -8483,6 +8483,11 @@ int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get)
 	if (!panel) {
 		pr_info("%s: panel NULL, return\n", __func__);
 		return -EINVAL;
+	}
+
+	if(!panel->pcd_config.pcd_reg_enabled) {
+		pr_info("PCD reg reading is not enabled, skipping.\n");
+		return 0;
 	}
 
 	if(panel->bl_config.bl_level <= 0) {
