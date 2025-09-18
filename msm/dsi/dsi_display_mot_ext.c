@@ -1814,6 +1814,11 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 				else if(panel->bl_config.aod_bl_level > 0)
 					bl_level = panel->bl_config.aod_bl_level;
 				if(bl_level) {
+					if(!panel->bl_config.bl_level) {
+						panel->bl_config.bl_level = bl_level;
+						panel->lhbm_config.dbv_level = bl_level;
+						pr_info("unexpect bl_level, need restore backlight and lhbm dbv from aod : %d\n", bl_level);
+					}
 					payload[1] = (bl_level & 0xFF00) >> 8;
 					payload[2] = bl_level & 0xFF;
 					pr_info("[%s] restore backlight from aod : %02X => [0x%02X%02X]\n",
