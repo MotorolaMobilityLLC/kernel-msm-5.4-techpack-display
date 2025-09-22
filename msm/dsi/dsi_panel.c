@@ -7197,18 +7197,6 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 				cmds->msg.tx_len == 15){
                        payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(panel->cur_partition_refreshrate.refreshrate3rd);
 		    }
-		}else if(refresh_rate == 60){
-		    //update refreshrate1st && update refreshrate3st
-		    if(payload[0] == 0x6B &&  ((panel->prr_config.boundaryLine_reg_count + 1) == i ||(panel->prr_config.boundaryLine_reg_count + 5) )&&
-				cmds->msg.tx_len == 15){
-				payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = 0x0B;
-		    }
-
-		    //update refreshrate2st
-		    if(payload[0] == 0x6B &&  (panel->prr_config.boundaryLine_reg_count + 3) == i &&
-				cmds->msg.tx_len == 15){
-                           payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = 0x01;
-		    }
 		}
 		cmds++;
 
