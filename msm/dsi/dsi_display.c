@@ -814,6 +814,10 @@ void dsi_display_set_cmd_tx_ctrl_flags(struct dsi_display *display,
 				flags |= DSI_CTRL_CMD_ASYNC_WAIT;
 		if (msg->flags & MIPI_DSI_MSG_ASYNC_OVERRIDE)
 				flags |= DSI_CTRL_CMD_ASYNC_WAIT;
+
+		if (display->panel->panel_mode == DSI_OP_VIDEO_MODE && !display->enabled &&
+			(flags & DSI_CTRL_CMD_ASYNC_WAIT))
+			flags &= ~DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
 	}
 
 	cmd->ctrl_flags |= flags;
