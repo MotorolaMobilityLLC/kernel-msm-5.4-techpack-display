@@ -310,6 +310,10 @@ struct dsi_panel_apl_config {
 	struct dsi_panel_cmd_set apl_cmd_on;
 	struct dsi_panel_cmd_set apl_cmd_off;
 	bool apl_state;
+	bool apl_bl_update;
+	bool apl_bl_set;
+	u32 apl_reg;
+	u32 apl_bl_pos;
 };
 
 struct dsi_panel_aod_config {
@@ -671,4 +675,5 @@ int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel);
 void set_panelpcdcheck_enable(struct dsi_panel *panel, bool en);
 int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get);
 void dsi_panel_check_pcd_read_flag(struct dsi_panel *panel);
+void dsi_panel_apl_backlight_update(struct dsi_panel *panel, struct dsi_panel_cmd_set *apl_cmd);
 #endif /* _DSI_PANEL_H_ */
