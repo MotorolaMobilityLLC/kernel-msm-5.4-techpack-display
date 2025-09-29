@@ -929,20 +929,56 @@ static ssize_t retire_frame_event_show(struct device *device,
 
 	crtc = dev_get_drvdata(device);
 	sde_crtc = to_sde_crtc(crtc);
+
 	return scnprintf(buf, PAGE_SIZE, "RETIRE_FRAME_TIME=%llu\n",
 			ktime_to_ns(sde_crtc->retire_frame_event_time));
+}
+
+static ssize_t clk_bw_stats_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct drm_crtc *crtc = NULL;
+	struct sde_crtc *sde_crtc = NULL;
+
+	if (!device || !buf) {
+		SDE_ERROR("invalid input param(s)\n");
+		return -EAGAIN;
+	}
+
+	crtc = dev_get_drvdata(device);
+	if (!crtc) {
+		SDE_ERROR("invalid crtc\n");
+		return -EAGAIN;
+	}
+	sde_crtc = to_sde_crtc(crtc);
+	if (!sde_crtc) {
+		SDE_ERROR("invalid sde_crtc\n");
+		return -EAGAIN;
+	}
+
+	struct sde_crtc_state *cstate =
+			crtc ? to_sde_crtc_state(crtc->state) : NULL;
+    if (cstate) {
+	    return scnprintf(buf, PAGE_SIZE, "crtc en=%d core_clk_rate=%llu bw=%llu ib=%llu\n",
+			crtc->enabled, cstate->new_perf.core_clk_rate,
+			cstate->new_perf.bw_ctl[SDE_POWER_HANDLE_DBUS_ID_MNOC],
+			cstate->new_perf.max_per_pipe_ib[SDE_POWER_HANDLE_DBUS_ID_MNOC]);
+    } else
+	    return scnprintf(buf, PAGE_SIZE, "Null CRTC\n");
 }
 
 static DEVICE_ATTR_RO(vsync_event);
 static DEVICE_ATTR_RW(measured_fps);
 static DEVICE_ATTR_RW(fps_periodicity_ms);
 static DEVICE_ATTR_RO(retire_frame_event);
+static DEVICE_ATTR_RO(clk_bw_stats);
 
 static struct attribute *sde_crtc_dev_attrs[] = {
 	&dev_attr_vsync_event.attr,
 	&dev_attr_measured_fps.attr,
 	&dev_attr_fps_periodicity_ms.attr,
 	&dev_attr_retire_frame_event.attr,
+	&dev_attr_clk_bw_stats.attr,
 	NULL
 };
 
