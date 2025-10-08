@@ -303,6 +303,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_CMD_BACKLIGHT: Update video mode true aod backlight
  * @DSI_CMD_SET_CMD_SWITCH_IN2:             Cmd mode switch in2
  * @DSI_CMD_SET_PANEL_PCD_REG:             Panel pcd reg
+ * @DSI_CMD_SET_PANEL_OD_ON:               Panel od on
+ * @DSI_CMD_SET_PANEL_OD_OFF:              Panel od off
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -362,6 +364,8 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_CMD_BACKLIGHT,
 	DSI_CMD_SET_CMD_SWITCH_IN2,
 	DSI_CMD_SET_PANEL_PCD_REG,
+	DSI_CMD_SET_PANEL_OD_ON,
+	DSI_CMD_SET_PANEL_OD_OFF,
 	DSI_CMD_SET_MAX
 };
 

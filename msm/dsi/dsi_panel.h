@@ -316,6 +316,14 @@ struct dsi_panel_apl_config {
 	u32 apl_bl_pos;
 };
 
+struct dsi_panel_od_config {
+	bool enable;
+	u32 od_threshold;
+	struct dsi_panel_cmd_set od_cmd_on;
+	struct dsi_panel_cmd_set od_cmd_off;
+	bool od_state;
+};
+
 struct dsi_panel_aod_config {
 	bool enable;
 	u32 aod_backlight_threshold;
@@ -449,6 +457,8 @@ struct dsi_panel {
 	struct drm_panel_cellid_config cellid_config;
 
 	struct dsi_panel_apl_config apl_config;
+
+	struct dsi_panel_od_config od_config;
 
 	struct dsi_panel_aod_config aod_config;
 

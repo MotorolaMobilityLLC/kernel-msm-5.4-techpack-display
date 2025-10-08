@@ -1071,6 +1071,41 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
 	return rc;
 }
 
+static int dsi_panel_set_od(struct dsi_panel *panel, u32 bl_lvl)
+{
+	int rc = 0;
+	struct dsi_panel_cmd_set *od_cmd;
+
+	if (!panel || (bl_lvl > 0xffff) ||!panel->panel_initialized) {
+		DSI_ERR("invalid params\n");
+		return -EINVAL;
+	}
+
+	if (bl_lvl <= panel->od_config.od_threshold) {
+		od_cmd = &panel->od_config.od_cmd_on;
+		dsi_panel_od_backlight_update(panel, od_cmd);
+		pr_debug("%s: od on with backlight\n", __func__);
+		rc = dsi_panel_tx_send_mot_cmd(panel, od_cmd);
+		panel->od_config.od_state = true;
+		DSI_DEBUG("od config od_config.od_threshold = %d od_config.od_state =%d,bl_lvl = %d\n",
+                      panel->od_config.od_threshold,panel->od_config.od_state,bl_lvl);
+	}
+	else if (bl_lvl > panel->od_config.od_threshold) {
+		od_cmd = &panel->od_config.od_cmd_off;
+		dsi_panel_od_backlight_update(panel, od_cmd);
+		pr_debug("%s: od off with backlight\n", __func__);
+		rc = dsi_panel_tx_send_mot_cmd(panel, od_cmd);
+		panel->od_config.od_state = false;
+		DSI_DEBUG("od config od_config.od_threshold = %d od_config.od_state =%d,bl_lvl = %d\n",
+                      panel->od_config.od_threshold,panel->od_config.od_state,bl_lvl);
+	}
+	if (rc)
+		DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_OD cmd, rc=%d\n",
+		       panel->name, rc);
+
+	return rc;
+}
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -1097,8 +1132,12 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 			rc = dsi_panel_set_apl(panel, bl_lvl);
 		if (panel->apl_config.apl_bl_update && panel->apl_config.apl_bl_set)
 			pr_debug("dsi: backlight set with apl cmds, skip\n");
-		else
-			rc = dsi_panel_update_backlight(panel, bl_lvl);
+		else {
+			if(panel->od_config.enable)
+				rc = dsi_panel_set_od(panel, bl_lvl);
+			else
+				rc = dsi_panel_update_backlight(panel, bl_lvl);
+		}
 		break;
 	case DSI_BACKLIGHT_DUMMY:
 		rc = 0;
@@ -2963,6 +3002,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,cmd-mode-backlight-commands",
 	"qcom,cmd-mode-switch-in2-commands",
 	"qcom,mdss-dsi-panel-pcd-reg-command",
+	"qcom,mdss-dsi-panel-od-on-command",
+	"qcom,mdss-dsi-panel-od-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -3022,6 +3063,8 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,cmd-mode-backlight-commands-state",
 	"qcom,cmd-mode-switch-in2-commands-state",
 	"qcom,mdss-dsi-panel-pcd-reg-command-state",
+	"qcom,mdss-dsi-panel-od-on-command-state",
+	"qcom,mdss-dsi-panel-od-off-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5194,6 +5237,55 @@ error:
 	return rc;
 }
 
+static int dsi_panel_parse_od_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_panel_od_config *od_config;
+	struct dsi_parser_utils *utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	utils = &panel->utils;
+	od_config = &panel->od_config;
+
+	od_config->enable = utils->read_bool(utils->data,
+		"qcom,panel-od-enabled");
+
+	if (!od_config->enable)
+		return 0;
+	rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-bl-od-threshold",
+			&(od_config->od_threshold));
+	if (rc) {
+		DSI_ERR("%s:qcom,mdss-dsi-bl-od-threshold is not defined, set it to 0\n", __func__);
+		od_config->od_threshold = 0;
+		goto error;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(panel, &od_config->od_cmd_on,
+				DSI_CMD_SET_PANEL_OD_ON, utils);
+	if (!od_config->od_cmd_on.count) {
+		DSI_ERR("panel od_cmd_on command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(panel, &od_config->od_cmd_off,
+				DSI_CMD_SET_PANEL_OD_OFF, utils);
+	if (!od_config->od_cmd_off.count) {
+		DSI_ERR("panel od_cmd_off command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	return 0;
+error:
+	return rc;
+}
+
 static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -5770,6 +5862,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	rc = dsi_panel_parse_apl_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse local apl config, rc=%d\n", rc);
+
+	rc = dsi_panel_parse_od_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local od config, rc=%d\n", rc);
 
 	rc = dsi_panel_parse_aod_config(panel);
 	if (rc)

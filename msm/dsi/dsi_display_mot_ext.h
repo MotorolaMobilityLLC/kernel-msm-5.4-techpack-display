@@ -81,5 +81,6 @@ static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
 
 bool dsi_panel_is_gsi_mode(void);
 void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_type type);
+void dsi_panel_od_backlight_update(struct dsi_panel *panel, struct dsi_panel_cmd_set *od_cmd);
 
 #endif /* _DSI_DISPLAY_MOT_EXT_H_ */
