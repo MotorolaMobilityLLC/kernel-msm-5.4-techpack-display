@@ -935,7 +935,7 @@ int sde_cesta_resource_disable(u32 cesta_index)
 	 * Add delay before disabling MMCX to allow HW to complete any pending operations.
 	 * This avoids potential NOC issue.
 	 */
-	usleep_range(500, 510);
+	usleep_range(600, 610);
 
 	return 0;
 }
