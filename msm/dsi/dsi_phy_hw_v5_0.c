@@ -359,6 +359,11 @@ static void dsi_phy_hw_dphy_enable(struct dsi_phy_hw *phy, struct dsi_phy_cfg *c
 	glbl_str_swi_cal_sel_ctrl = 0x00;
 	glbl_hstx_str_ctrl_0 = 0x88;
 
+	if ((cfg->phy_drive_strength > 0 && cfg->phy_drive_strength <= 0xff ) &&
+		(cfg->phy_drive_strength != glbl_hstx_str_ctrl_0)) {
+		glbl_str_swi_cal_sel_ctrl = 0x01;
+		glbl_hstx_str_ctrl_0 = cfg->phy_drive_strength;
+	}
 
 	split_link_enabled = cfg->split_link.enabled;
 	lanes_per_sublink = cfg->split_link.lanes_per_sublink;
