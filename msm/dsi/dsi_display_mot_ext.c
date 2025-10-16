@@ -1982,3 +1982,34 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 		cmds++;
 	}
 }
+
+void dsi_panel_od_bl_reg_update(struct dsi_panel *panel, struct dsi_panel_cmd_set *od_cmd) {
+	struct dsi_cmd_desc *cmds;
+	u8 *payload;
+	u32 count;
+	int i = 0;
+	int bl_level;
+
+	if (!panel || !od_cmd)
+		return;
+
+	cmds = od_cmd->cmds;
+	count = od_cmd->count;
+
+	if (count == 0) {
+		DSI_ERR("%s: od commands count 0\n", __func__);
+		return;
+	}
+
+	bl_level = panel->bl_config.bl_level;
+	for (i = 0; i < count; i++) {
+		payload = (u8 *)cmds->msg.tx_buf;
+		if (payload[0] == 0x51) {
+			payload[1] = (bl_level & 0xFF00) >> 8;
+			payload[2] = bl_level & 0xFF;
+			pr_debug("%s: update od bl payload[0]=0x%02X payload[1]=0x%02X payload[2]=0x%02X\n", __func__, payload[0], payload[1], payload[2]);
+			break;
+		}
+		cmds++;
+	}
+}

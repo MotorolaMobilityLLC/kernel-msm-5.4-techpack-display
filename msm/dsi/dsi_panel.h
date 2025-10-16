@@ -321,6 +321,14 @@ struct dsi_panel_lhbm_config {
 	u32 lhbm_not_allowed_fps_list_len;
 };
 
+struct dsi_panel_od_config {
+	bool enable;
+	u32 od_threshold;
+	struct dsi_panel_cmd_set od_cmd_on;
+	struct dsi_panel_cmd_set od_cmd_off;
+	bool bl_cross;
+};
+
 struct dsi_panel_aod_config {
 	bool enable;
 	bool bl_vid_update;
@@ -445,6 +453,7 @@ struct dsi_panel {
 	struct dsi_panel_lhbm_config lhbm_config;
 
 	struct drm_panel_cellid_config cellid_config;
+	struct dsi_panel_od_config od_config;
 	struct dsi_panel_aod_config aod_config;
 
 	struct dsi_parser_utils utils;

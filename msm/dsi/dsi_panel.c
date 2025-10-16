@@ -997,6 +997,84 @@ static bool dsi_panel_set_hbm_backlight(struct dsi_panel *panel, u32 *bl_lvl)
 	return false;
 }
 
+static int dsi_panel_tx_send_mot_cmd(struct dsi_panel *panel,
+		struct dsi_panel_cmd_set *mot_cmds)
+{
+	int rc = 0;
+	int i = 0;
+	struct dsi_cmd_desc *cmds;
+	enum dsi_cmd_set_state state;
+	u32 count;
+	ssize_t len;
+
+	if (!mot_cmds || !panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+	count = mot_cmds->count;
+	cmds = mot_cmds->cmds;
+	state = mot_cmds->state;
+
+	if (count == 0) {
+		DSI_DEBUG("[%s] No dsi_panel_tx_send_mot_cmd commands to be sent\n",
+			 panel->name);
+		goto error;
+	}
+
+	for (i = 0; i < count; i++) {
+		cmds->ctrl_flags = 0;
+
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		len = dsi_host_transfer_sub(panel->host, cmds);
+		if (len < 0) {
+			rc = len;
+			DSI_ERR("failed to set dsi_panel_tx_send_mot_cmd  cmds, rc=%d\n", rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	return rc;
+}
+
+int dsi_panel_update_od_backlight(struct dsi_panel *panel, u32 bl_lvl)
+{
+	int rc = 0;
+	struct dsi_panel_cmd_set *od_cmd;
+
+	if (!panel || (bl_lvl > 0xffff) ||!panel->panel_initialized) {
+		DSI_ERR("invalid params\n");
+		return -EINVAL;
+	}
+
+	if (bl_lvl <= panel->od_config.od_threshold) {
+		od_cmd = &panel->od_config.od_cmd_on;
+		dsi_panel_od_bl_reg_update(panel, od_cmd);
+		pr_debug("%s: od on with backlight\n", __func__);
+		rc = dsi_panel_tx_send_mot_cmd(panel, od_cmd);
+		DSI_INFO("Enable od config od_config.od_threshold = %d ,bl_lvl = %d\n",
+                      panel->od_config.od_threshold ,bl_lvl);
+	}
+	else if (bl_lvl > panel->od_config.od_threshold) {
+		od_cmd = &panel->od_config.od_cmd_off;
+		dsi_panel_od_bl_reg_update(panel, od_cmd);
+		pr_debug("%s: od off with backlight\n", __func__);
+		rc = dsi_panel_tx_send_mot_cmd(panel, od_cmd);
+		DSI_INFO("Disable od config od_config.od_threshold = %d, bl_lvl = %d\n",
+                      panel->od_config.od_threshold ,bl_lvl);
+	}
+	if (rc)
+		DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_OD cmd, rc=%d\n",
+		       panel->name, rc);
+
+	return rc;
+}
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -1022,8 +1100,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		rc = backlight_device_set_brightness(bl->raw_bd, bl_lvl);
 		break;
 	case DSI_BACKLIGHT_DCS:
-		if(panel->rm690a0_backlight_config){
-			rc = mot_rm690a0_update_backlight(panel, bl_lvl);}
+		if(panel->rm690a0_backlight_config)
+			rc = mot_rm690a0_update_backlight(panel, bl_lvl);
+		else if(panel->od_config.enable && panel->od_config.bl_cross)
+			rc = dsi_panel_update_od_backlight(panel, bl_lvl);
 		else
 			rc = dsi_panel_update_backlight(panel, bl_lvl);
 		break;
@@ -2930,6 +3010,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-off-deep-standby-command",
 	"qcom,mdss-dsi-off-post-command",
 	"qcom,mdss-dsi-panel-pcd-reg-command",
+	"qcom,mdss-dsi-panel-od-on-command",
+	"qcom,mdss-dsi-panel-od-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2988,6 +3070,8 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-off-deep-standby-command-state",
 	"qcom,mdss-dsi-off-post-command-state",
 	"qcom,mdss-dsi-panel-pcd-reg-command-state",
+	"qcom,mdss-dsi-panel-od-on-command-state",
+	"qcom,mdss-dsi-panel-od-off-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5289,6 +5373,55 @@ static void dsi_panel_pcd_config_deinit(struct drm_panel_pcd_config *pcd_config)
 		kfree(pcd_config->return_buf);
 }
 
+static int dsi_panel_parse_od_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_panel_od_config *od_config;
+	struct dsi_parser_utils *utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	utils = &panel->utils;
+	od_config = &panel->od_config;
+
+	od_config->enable = utils->read_bool(utils->data,
+		"qcom,panel-od-enabled");
+
+	if (!od_config->enable)
+		return 0;
+	rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-bl-od-threshold",
+			&(od_config->od_threshold));
+	if (rc) {
+		DSI_ERR("%s:qcom,mdss-dsi-bl-od-threshold is not defined\n", __func__);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(&od_config->od_cmd_on,
+				DSI_CMD_SET_PANEL_OD_ON, utils);
+	if (!od_config->od_cmd_on.count) {
+		DSI_ERR("panel od_cmd_on command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(&od_config->od_cmd_off,
+				DSI_CMD_SET_PANEL_OD_OFF, utils);
+	if (!od_config->od_cmd_off.count) {
+		DSI_ERR("panel od_cmd_off command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	return 0;
+error:
+	return rc;
+}
+
 static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -5793,6 +5926,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	rc = dsi_panel_parse_pcd_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse pcd reg config, rc=%d\n", rc);
+
+	rc = dsi_panel_parse_od_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local od config, rc=%d\n", rc);
 
 	rc = dsi_panel_parse_aod_config(panel);
 	if (rc)

@@ -294,6 +294,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_OFF_DEEP_STANDBY:               Panel deep standby,low power as sleep in
  * @DSI_CMD_SET_OFF_PANELIC_MIPI:               Panel deep standby,low power as sleep in
  * @DSI_CMD_SET_PANEL_PCD_REG:             Panel pcd reg
+ * @DSI_CMD_SET_PANEL_OD_ON:               Panel od on
+ * @DSI_CMD_SET_PANEL_OD_OFF:              Panel od off
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -352,6 +354,8 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_OFF_DEEP_STANDBY,
 	DSI_CMD_SET_OFF_PANELIC_MIPI,
 	DSI_CMD_SET_PANEL_PCD_REG,
+	DSI_CMD_SET_PANEL_OD_ON,
+	DSI_CMD_SET_PANEL_OD_OFF,
 	DSI_CMD_SET_MAX
 };
 

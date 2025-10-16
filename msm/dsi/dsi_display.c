@@ -296,6 +296,20 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 	}
 	lastTrend = curTrend;
 
+	if (panel->od_config.enable)
+	{
+		if (panel->bl_config.bl_level > panel->od_config.od_threshold &&
+			bl_lvl > panel->od_config.od_threshold)
+			panel->od_config.bl_cross = false;
+		else if (panel->bl_config.bl_level <= panel->od_config.od_threshold &&
+			bl_lvl <= panel->od_config.od_threshold && panel->bl_config.bl_level)
+			panel->od_config.bl_cross = false;
+		else if (0 == bl_lvl)
+			panel->od_config.bl_cross = false;
+		else
+			panel->od_config.bl_cross = true;
+	}
+
 	panel->bl_config.bl_level = bl_lvl;
 
 	/* scale backlight */
