@@ -88,18 +88,13 @@ static inline u32 dsi_display_mode_actual_rr(struct dsi_mode_info *timing)
 }
 // END Motorola zhanggb, IKSWT-18219
 
-static inline u32 dsi_display_prr_refreshrate_reg(int refreshrate)
+static inline u32 dsi_display_prr_refreshrate_reg(int base_rr, int partition_rr)
 {
-	if (refreshrate == 10)
-		return 0x0B;
-	else if (refreshrate == 30)
-		return 0x03;
-	else if (refreshrate == 60)
-		return 0x01;
-	else if (refreshrate == 120)
+	if(partition_rr > 0 && partition_rr < base_rr && (base_rr % partition_rr == 0)) {
+		return base_rr/partition_rr-1;
+	} else {
 		return 0x00;
-	else
-		return 0x00;
+	}
 }
 bool dsi_panel_is_gsi_mode(void);
 
