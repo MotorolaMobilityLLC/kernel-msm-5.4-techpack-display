@@ -323,6 +323,10 @@ struct dsi_panel_PartitionRefreshrate_config {
 	u32 min_boundaryLine;
 	u32 max_boundaryLine;
 	u32 boundaryLine_reg_count;
+
+	u32 *prr_dfps_list;
+	int prr_dfps_list_len;
+	bool is_prr_under_dfps_support;
 };
 
 struct dsi_panel_apl_config {

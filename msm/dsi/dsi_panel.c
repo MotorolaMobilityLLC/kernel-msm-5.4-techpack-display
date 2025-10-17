@@ -5913,10 +5913,45 @@ static int dsi_panel_parse_prr_config(struct dsi_panel *panel)
                     DSI_ERR("%s:qcom,mdss-dsi-panel-boundaryLine-reg-count, set it to 5\n", __func__);
                     prr_config->boundaryLine_reg_count = 5;
 		}
-       }
-       DSI_INFO("%s:prr_config->enable = %d, prr_config->slice_h =%d\n", __func__,
-            prr_config->enable,prr_config->slice_h);
 
+		prr_config->prr_dfps_list_len = utils->count_u32_elems(utils->data,
+				"qcom,mdss-dsi-panel-partition-refreshrate-under-dfps-list");
+		if (prr_config->prr_dfps_list_len >= 1) {
+			int i;
+			DSI_INFO("[%s] partition refresh list len %d\n", panel->name, prr_config->prr_dfps_list_len);
+			prr_config->prr_dfps_list = kcalloc(prr_config->prr_dfps_list_len, sizeof(u32),
+					GFP_KERNEL);
+			if (!prr_config->prr_dfps_list) {
+				prr_config->is_prr_under_dfps_support = false;
+				rc = -ENOMEM;
+				return rc;
+			}
+
+			rc = utils->read_u32_array(utils->data,
+					"qcom,mdss-dsi-panel-partition-refreshrate-under-dfps-list",
+					prr_config->prr_dfps_list,
+					prr_config->prr_dfps_list_len);
+			if (rc) {
+				DSI_ERR("[%s] partition refresh list parse failed\n", panel->name);
+					prr_config->is_prr_under_dfps_support = false;
+				rc = -EINVAL;
+				return rc;
+			}
+
+			prr_config->is_prr_under_dfps_support = true;
+			DSI_INFO("[%s] prr_dfps_list: ", panel->name);
+			for(i = 0; i < prr_config->prr_dfps_list_len; i++) {
+				pr_cont("%d ", prr_config->prr_dfps_list[i]);
+			}
+			pr_cont("\n");
+		} else {
+			prr_config->is_prr_under_dfps_support = false;
+			DSI_INFO("%s:partition refresh rate under dfps is not supported\n", __func__);
+		}
+       }
+       DSI_INFO(" enable = %d, slice_h =%d, min_boundaryLine =%d, max_boundaryLine =%d\n",
+            prr_config->enable,prr_config->slice_h,
+			prr_config->min_boundaryLine, prr_config->max_boundaryLine );
        return 0;
 }
 
@@ -7804,8 +7839,8 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 		if(payload[0] == 0x6b &&  (panel->prr_config.boundaryLine_reg_count -1) == i &&
 			cmds->msg.tx_len == 5)
 		{
-			if(panel->cur_partition_refreshrate.boundaryLine1st > panel->prr_config.min_boundaryLine &&
-				panel->cur_partition_refreshrate.boundaryLine1st < panel->prr_config.max_boundaryLine){
+			if(panel->cur_partition_refreshrate.boundaryLine1st >= panel->prr_config.min_boundaryLine &&
+				panel->cur_partition_refreshrate.boundaryLine1st <= panel->prr_config.max_boundaryLine){
 				payload[1] = (panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h) >> 0x08;
 				payload[2] = (panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h) & 0xFF;
 			}else{
@@ -7813,8 +7848,8 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 				payload[2] = 0x10;
 			}
 
-			if(panel->cur_partition_refreshrate.boundaryLine2nd > panel->prr_config.min_boundaryLine &&
-				panel->cur_partition_refreshrate.boundaryLine2nd < panel->prr_config.max_boundaryLine){
+			if(panel->cur_partition_refreshrate.boundaryLine2nd >= panel->prr_config.min_boundaryLine &&
+				panel->cur_partition_refreshrate.boundaryLine2nd <= panel->prr_config.max_boundaryLine){
 				payload[3] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1)* panel->prr_config.slice_h) >> 0x08;
 				payload[4] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1) * panel->prr_config.slice_h) & 0xFF;
 			}else{
@@ -7827,19 +7862,19 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 		    //update refreshrate1st
 		    if(payload[0] == 0x6B &&  (panel->prr_config.boundaryLine_reg_count + 1) == i &&
 				cmds->msg.tx_len == 15){
-				payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(panel->cur_partition_refreshrate.refreshrate1st);
+				payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(refresh_rate, panel->cur_partition_refreshrate.refreshrate1st);
 		    }
 
 		    //update refreshrate2st
 		    if(payload[0] == 0x6B &&  (panel->prr_config.boundaryLine_reg_count + 3) == i &&
 				cmds->msg.tx_len == 15){
-                           payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(panel->cur_partition_refreshrate.refreshrate2nd);
+                           payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(refresh_rate, panel->cur_partition_refreshrate.refreshrate2nd);
 		    }
 
 		    //update refreshrate3st
 		    if(payload[0] == 0x6B &&  (panel->prr_config.boundaryLine_reg_count + 5) == i &&
 				cmds->msg.tx_len == 15){
-                       payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(panel->cur_partition_refreshrate.refreshrate3rd);
+                       payload[2] = payload[5] =payload[8] =payload[11] = payload[14] = dsi_display_prr_refreshrate_reg(refresh_rate, panel->cur_partition_refreshrate.refreshrate3rd);
 		    }
 		}else if(refresh_rate == 60){
 		    //update refreshrate1st && update refreshrate3st
@@ -7857,6 +7892,19 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 		cmds++;
 
 	}
+}
+
+static bool dsi_panel_partition_refreshrate_dfps_is_available(struct dsi_panel *panel){
+	int i;
+
+	if(panel->prr_config.is_prr_under_dfps_support) {
+		for( i = 0; i < panel->prr_config.prr_dfps_list_len; i++) {
+			if(panel->cur_mode->timing.refresh_rate == panel->prr_config.prr_dfps_list[i]) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 int dsi_panel_switch(struct dsi_panel *panel)
@@ -7911,14 +7959,18 @@ int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
 	timing = panel->cur_mode->timing;
 	DSI_INFO("%s: timing.refresh_rate = %d \n", __func__,timing.refresh_rate);
 
-	if(panel->prr_config.enable && dsi_display_mode_actual_rr(&timing) == PARTITION_REFRESHRATE){
+	if(panel->prr_config.enable &&
+	  (dsi_display_mode_actual_rr(&timing) == PARTITION_REFRESHRATE ||
+	  dsi_panel_partition_refreshrate_dfps_is_available(panel))){
 	    if(panel->cur_partition_refreshrate.reserved == 0){
+	        DSI_INFO("%s: timing.refresh_rate = %d , send DSI_CMD_SET_PANEL_PRR_DISABLE cmd\n", __func__,timing.refresh_rate);
 	        rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PRR_DISABLE, false);
 	        if (rc)
                    DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_DISABLE cmds, rc=%d\n",
                        panel->name, rc);
           }else{
 	        dsi_panel_partition_refreshrate_timming_switch_update(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, timing.refresh_rate);
+	        DSI_INFO("%s: timing.refresh_rate = %d , send DSI_CMD_SET_PANEL_PRR_ENABLE cmd\n", __func__,timing.refresh_rate);
 	        rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, false);
 	        if (rc)
 	            DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_ENABLE cmds, rc=%d\n",
