@@ -338,6 +338,14 @@ struct dsi_panel_apl_config {
 	int dobly_enable;
 };
 
+struct dsi_panel_odc_config {
+	bool enable;
+	u32 odc_threshold;
+	struct dsi_panel_cmd_set odc_cmd_on;
+	struct dsi_panel_cmd_set odc_cmd_off;
+	bool odc_state;
+};
+
 struct dsi_panel_aod_config {
 	bool enable;
 	u32 aod_backlight_threshold;
@@ -471,6 +479,8 @@ struct dsi_panel {
 	struct drm_panel_cellid_config cellid_config;
 
 	struct dsi_panel_apl_config apl_config;
+
+	struct dsi_panel_odc_config odc_config;
 
 	struct dsi_panel_PartitionRefreshrate_config prr_config;
 
