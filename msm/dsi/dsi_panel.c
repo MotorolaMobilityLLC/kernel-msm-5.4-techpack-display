@@ -1205,6 +1205,37 @@ static int dsi_panel_set_apl(struct dsi_panel *panel, u32 bl_lvl)
 	return rc;
 }
 
+static int dsi_panel_set_odc(struct dsi_panel *panel, u32 bl_lvl)
+{
+	int rc = 0;
+	struct dsi_panel_cmd_set *odc_cmd;
+
+	if (!panel || (bl_lvl > 0xffff) ||!panel->panel_initialized) {
+		DSI_DEBUG("invalid params\n");
+		return -EINVAL;
+	}
+
+	if(bl_lvl <= panel->odc_config.odc_threshold && !panel->odc_config.odc_state){
+		odc_cmd = &panel->odc_config.odc_cmd_on;
+		rc = dsi_panel_tx_send_mot_cmd(panel, odc_cmd);
+		panel->odc_config.odc_state = true;
+		DSI_INFO("odc config odc_config.odc_threshold = %d odc_config.odc_state =%d,bl_lvl = %d\n",
+                      panel->odc_config.odc_threshold,panel->odc_config.odc_state,bl_lvl);
+	}
+	else if(bl_lvl > panel->odc_config.odc_threshold && panel->odc_config.odc_state){
+		odc_cmd = &panel->odc_config.odc_cmd_off;
+		rc = dsi_panel_tx_send_mot_cmd(panel, odc_cmd);
+		panel->odc_config.odc_state = false;
+		DSI_INFO("odc config odc_config.odc_threshold = %d odc_config.odc_state =%d,bl_lvl = %d\n",
+                      panel->odc_config.odc_threshold,panel->odc_config.odc_state,bl_lvl);
+	}
+	if (rc)
+		DSI_INFO("[%s] failed to send DSI_CMD_SET_ODC cmd, rc=%d\n",
+		       panel->name, rc);
+
+	return rc;
+}
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -1229,6 +1260,8 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	case DSI_BACKLIGHT_DCS:
 		if(panel->apl_config.enable)
 			rc = dsi_panel_set_apl(panel, bl_lvl);
+		if(panel->odc_config.enable)
+			rc = dsi_panel_set_odc(panel, bl_lvl);
 		rc = dsi_panel_update_backlight(panel, bl_lvl);
 		break;
 	case DSI_BACKLIGHT_DUMMY:
@@ -3422,6 +3455,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-cellid-send-back-command",
 	"qcom,mdss-dsi-panel-apl-on-command",
 	"qcom,mdss-dsi-panel-apl-off-command",
+	"qcom,mdss-dsi-panel-odc-on-command",
+	"qcom,mdss-dsi-panel-odc-off-command",
 	"qcom,mdss-dsi-pcd-check-enable-command",
 	"qcom,mdss-dsi-pcd-check-disable-command",
 	"qcom,mdss-dsi-partition-refreshrate-on-command",
@@ -3498,6 +3533,8 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-cellid-send-back-command-states",
 	"qcom,mdss-dsi-panel-apl-on-command-state",
 	"qcom,mdss-dsi-panel-apl-off-command-state",
+	"qcom,mdss-dsi-panel-odc-on-command-state",
+	"qcom,mdss-dsi-panel-odc-off-command-state",
 	"qcom,mdss-dsi-pcd-check-enable-command-state",
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
 	"qcom,mdss-dsi-partition-refreshrate-on-command-state",
@@ -5867,6 +5904,58 @@ error:
 	return rc;
 }
 
+static int dsi_panel_parse_odc_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_panel_odc_config *odc_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	odc_config = &panel->odc_config;
+	if (!odc_config)
+		return -EINVAL;
+
+	odc_config->enable = utils->read_bool(utils->data,
+		"qcom,odc-enabled");
+
+	if (!odc_config->enable)
+		return 0;
+	rc = utils->read_u32(utils->data,
+			"qcom,mdss-dsi-panel-ODC-THRESHOLD-BL",
+			&(odc_config->odc_threshold));
+	if (rc) {
+		DSI_ERR("%s:qcom,mdss-dsi-panel-ODC-THRESHOLD-BL is not defined, set it to 0\n", __func__);
+		odc_config->odc_threshold = 0;
+		goto error;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(&odc_config->odc_cmd_on,
+				DSI_CMD_SET_ODC_ON, utils);
+	if (!odc_config->odc_cmd_on.count) {
+		DSI_ERR("panel odc_cmd_on command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(&odc_config->odc_cmd_off,
+				DSI_CMD_SET_ODC_OFF, utils);
+	if (!odc_config->odc_cmd_off.count) {
+		DSI_ERR("panel odc_cmd_off command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+	odc_config->odc_state = false;
+
+	return 0;
+error:
+	odc_config->enable = false;
+	return rc;
+}
+
 static int dsi_panel_parse_prr_config(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -6377,6 +6466,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	rc = dsi_panel_parse_apl_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse local apl config, rc=%d\n", rc);
+
+	rc = dsi_panel_parse_odc_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local odc config, rc=%d\n", rc);
 
 	rc = dsi_panel_parse_prr_config(panel);
 	if (rc)
