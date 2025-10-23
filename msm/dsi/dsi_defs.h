@@ -324,6 +324,8 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_PANEL_SEND_CELLID_BACK: panel cellid send back commands
  * @DSI_CMD_SET_APL_ON:              apl on
  * @DSI_CMD_SET_APL_OFF:               apl off
+ * @DSI_CMD_SET_ODC_ON:              ODC on
+ * @DSI_CMD_SET_ODC_OFF:               ODC off
  * @DSI_CMD_SET_PANEL_PCD_ENABLE:               Panel pcd check enable
  * @DSI_CMD_SET_PANEL_PCD_DISABLE:               Panel pcd check disable
  * @DSI_CMD_SET_PANEL_PRR_ENABLE,                partition refreshrate ON
@@ -403,6 +405,8 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_PANEL_SEND_CELLID_BACK,
 	DSI_CMD_SET_APL_ON,
 	DSI_CMD_SET_APL_OFF,
+	DSI_CMD_SET_ODC_ON,
+	DSI_CMD_SET_ODC_OFF,
 	DSI_CMD_SET_PANEL_PCD_ENABLE,
 	DSI_CMD_SET_PANEL_PCD_DISABLE,
 	DSI_CMD_SET_PANEL_PRR_ENABLE,
