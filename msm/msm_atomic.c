@@ -129,7 +129,8 @@ static inline bool _msm_seamless_for_conn(struct drm_connector *connector,
 			!old_conn_state->crtc->state->active_changed &&
 			old_conn_state->crtc->state->connectors_changed) {
 		if (old_conn_state->crtc == connector->state->crtc) {
-			if (enable && msm_is_private_mode_changed(
+			if ((enable || msm_is_mode_seamless_poms(msm_mode))
+				&& msm_is_private_mode_changed(
 				_msm_get_conn_state(old_conn_state->crtc->state)))
 				return false;
 			return true;
