@@ -4083,8 +4083,13 @@ int dsi_host_transfer_sub(struct mipi_dsi_host *host, struct dsi_cmd_desc *cmd,
 		}
 
 		rc = dsi_ctrl_cmd_transfer(display->ctrl[idx].ctrl, cmd, do_peripheral_flush);
-		if (rc)
-			DSI_ERR("[%s] cmd transfer failed, rc=%d\n", display->name, rc);
+		if (cmd->ctrl_flags & DSI_CTRL_CMD_READ) {
+			if (rc <= 0)
+				DSI_ERR("[%s] rx cmd transfer failed rc=%d\n", display->name, rc);
+		} else {
+			if (rc)
+				DSI_ERR("[%s] cmd transfer failed, rc=%d\n", display->name, rc);
+		}
 
 		dsi_ctrl_transfer_unprepare(display->ctrl[idx].ctrl, cmd->ctrl_flags);
 	}
