@@ -753,7 +753,7 @@ int dsi_panel_parse_elvss_config(struct dsi_panel *panel, u8 elv_vl);
 int dsi_panel_dfps_send_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel);
-void set_panelpcdcheck_enable(struct dsi_panel *panel, bool en);
+int set_panelpcdcheck_enable(struct dsi_panel *panel, bool en);
 int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get);
 void dsi_panel_check_pcd_read_flag(struct dsi_panel *panel);
 #endif /* _DSI_PANEL_H_ */
