@@ -50,6 +50,11 @@
 #define HBM_BRIGHTNESS(value) ((value) == HBM_OFF_STATE ?\
 			BRIGHTNESS_HBM_OFF : BRIGHTNESS_HBM_ON)
 
+#define PCD_REG_MAX_PASS_COUNT			5
+#define PCD_REG_SEQ_INTERVAL_DEFAULT		20
+#define PCD_REG_CHECK_INTERVAL_IN_MINUTES	720		//12 hours
+#define PCD_REG_CHECK_RETRY_MAX		3
+
 /* HBM implementation is different, depending on display and backlight hardware
  * design, which is classified into the following types:
  * HBM_TYPE_OLED: OLED panel, HBM is controlled by DSI register only, which
@@ -258,6 +263,30 @@ struct drm_panel_cellid_config {
 	u32 cellid_rlen;
 	u32 cellid_offset;
 	u8 *return_buf;
+};
+
+struct drm_panel_pcd_config {
+	bool pcd_reg_enabled;
+	bool pcd_reg_checkable;
+	bool pcd_reg_read_flag;
+	bool check_before_read;
+	struct dsi_panel_cmd_set pcd_reg_cmd;
+	u32 pcd_reg_rlen;
+	u32 pcd_reg_offset;
+	u32 pcd_reg_mask;
+	u8 *return_buf;
+	u8 pcd_reg_status;
+	u8 retry_count;
+	u32 pcd_reg_val;
+	u32 pcd_reg_pass_array[PCD_REG_MAX_PASS_COUNT];
+	u32 pcd_reg_pass_array_size;
+	u32 pcd_reg_pass_min;
+	u32 pcd_reg_pass_max;
+	u32 pcd_reg_read_delay_ms;
+	u32 check_seq_count;	//screen on count
+	u32 check_seq_interval;
+	u32 check_interval_in_mins;
+	u64 check_last_timestamp;
 };
 
 struct dsi_panel_spr_info {
@@ -493,6 +522,9 @@ struct dsi_panel {
 	bool esd_first_check;
 	bool check_pcd;
 	int panelPcdCheck_enable;
+	bool check_in_pcd;
+	int panelPcdCheck_in_enable;
+	struct drm_panel_pcd_config pcd_config;
 	struct sde_partition_refreshrate cur_partition_refreshrate;
 };
 
@@ -671,5 +703,9 @@ int dsi_panel_set_elvss_dim_off(struct dsi_panel *panel, u8 val);
 int dsi_panel_parse_elvss_config(struct dsi_panel *panel, u8 elv_vl);
 int dsi_panel_dfps_send_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel);
+int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel);
 void set_panelpcdcheck_enable(struct dsi_panel *panel);
+int set_panelpcdcheck_in_enable(struct dsi_panel *panel, bool en);
+int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get);
+void dsi_panel_check_pcd_read_flag(struct dsi_panel *panel);
 #endif /* _DSI_PANEL_H_ */

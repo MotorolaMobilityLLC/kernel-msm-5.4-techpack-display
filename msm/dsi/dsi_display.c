@@ -1897,6 +1897,12 @@ int dsi_display_set_power(struct drm_connector *connector,
 		return -EINVAL;
 	}
 
+	if (display->panel->pcd_config.pcd_reg_enabled
+			&& (SDE_MODE_DPMS_ON == power_mode)) {
+		display->panel->pcd_config.check_seq_count++;
+		dsi_panel_check_pcd_read_flag(display->panel);
+	}
+
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
 		DSI_INFO("Enter display power LP1 mode\n");
@@ -3989,8 +3995,13 @@ int dsi_host_transfer_sub(struct mipi_dsi_host *host, struct dsi_cmd_desc *cmd,
 		}
 
 		rc = dsi_ctrl_cmd_transfer(display->ctrl[idx].ctrl, cmd, do_peripheral_flush);
-		if (rc)
-			DSI_ERR("[%s] cmd transfer failed, rc=%d\n", display->name, rc);
+		if (cmd->ctrl_flags & DSI_CTRL_CMD_READ) {
+			if (rc <= 0)
+				DSI_ERR("[%s] rx cmd transfer failed rc=%d\n", display->name, rc);
+		} else {
+			if (rc)
+				DSI_ERR("[%s] cmd transfer failed, rc=%d\n", display->name, rc);
+		}
 
 		dsi_ctrl_transfer_unprepare(display->ctrl[idx].ctrl, cmd->ctrl_flags);
 	}
@@ -7063,6 +7074,68 @@ static ssize_t panelPcdCheck_show(struct device *device,
 	    return scnprintf(buf, PAGE_SIZE, "%s\n", "Not a DSI panel");
 }
 
+static ssize_t panelPcdValue_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *conn;
+	struct sde_connector *sde_conn;
+	struct dsi_display *dsi_display;
+	struct dsi_panel *panel;
+
+	int rc;
+	ssize_t len=0;
+
+	if (!device || !buf) {
+		SDE_ERROR("invalid input param(s)\n");
+		return -EAGAIN;
+	}
+
+	pr_info("%s: ++", __func__);
+	conn = dev_get_drvdata(device);
+	sde_conn = to_sde_connector(conn);
+	dsi_display = sde_conn->display;
+
+	if (!dsi_display || !dsi_display->panel) {
+		pr_info("%s: display panel NULL, return\n", __func__);
+		return -EINVAL;
+	}
+
+	panel = dsi_display->panel;
+	if (panel->pcd_config.pcd_reg_enabled) {
+		rc = dsi_panel_read_pcd_reg(panel, true);
+		if (!rc)
+			len += snprintf(buf + len, PAGE_SIZE - len, "%02x", panel->pcd_config.pcd_reg_val);
+	}
+	return len;
+}
+
+static ssize_t panelHwStatus_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *conn;
+	struct sde_connector *sde_conn;
+	struct dsi_display *dsi_display;
+
+	ssize_t len = 0;
+
+	if (!device || !buf) {
+		SDE_ERROR("invalid input param(s)\n");
+		return -EAGAIN;
+	}
+
+	pr_debug("%s: +", __func__);
+	conn = dev_get_drvdata(device);	sde_conn = to_sde_connector(conn);
+	dsi_display = sde_conn->display;
+
+	if (!dsi_display || !dsi_display->panel) {
+		pr_info("%s: display panel NULL, return\n", __func__);
+		return -EINVAL;
+	}
+
+	len += snprintf(buf, PAGE_SIZE, "%d\n", dsi_display->panel->pcd_config.pcd_reg_status);
+return len;
+}
+
 static DEVICE_ATTR_RO(panelId);
 static DEVICE_ATTR_RO(panelVer);
 static DEVICE_ATTR_RO(panelName);
@@ -7072,6 +7145,8 @@ static DEVICE_ATTR_RO(panelBLExponent);
 static DEVICE_ATTR_RO(panelCellId);
 static DEVICE_ATTR_RO(panelDC);
 static DEVICE_ATTR_RW(panelPcdCheck);
+static DEVICE_ATTR_RO(panelPcdValue);
+static DEVICE_ATTR_RO(panelHwStatus);
 
 static const struct attribute *sde_conn_panel_attrs[] = {
 	&dev_attr_panelId.attr,
@@ -7083,6 +7158,8 @@ static const struct attribute *sde_conn_panel_attrs[] = {
 	&dev_attr_panelCellId.attr,
 	&dev_attr_panelDC.attr,
 	&dev_attr_panelPcdCheck.attr,
+	&dev_attr_panelPcdValue.attr,
+	&dev_attr_panelHwStatus.attr,
 	NULL
 };
 

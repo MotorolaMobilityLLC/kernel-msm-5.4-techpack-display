@@ -37,6 +37,7 @@
 #define DSI_MODE_MATCH_NONDSC_BPP_CONFIG (1 << 3)
 
 #define MAX_PANEL_CELLID      50
+#define MAX_PANEL_PCD_REG_LEN 50
 
 /*
  * DSI Validate Mode modifiers

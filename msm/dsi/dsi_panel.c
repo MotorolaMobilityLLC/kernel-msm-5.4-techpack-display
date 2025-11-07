@@ -1269,8 +1269,8 @@ static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
 
         param_map = panel_param->val_map;
 
-	DSI_INFO("%s: param_name=%s; val_max =%d, default_value=%d, value=%d\n",
-	        __func__, panel_param->param_name, panel_param->val_max,
+	DSI_INFO("%s: [%s], param_name=%s; val_max =%d, default_value=%d, value=%d\n",
+	        __func__, panel->name, panel_param->param_name, panel_param->val_max,
 		panel_param->default_value, panel_param->value);
 
 	mutex_lock(&panel->panel_lock);
@@ -1550,6 +1550,12 @@ static int dsi_panel_set_dc(struct dsi_panel *panel,
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0)
 		DSI_ERR("%s: failed to send param cmds. ret=%d\n", __func__, rc);
+
+	//get pcd reg
+	if (panel->pcd_config.pcd_reg_enabled && panel->pcd_config.pcd_reg_read_flag && (panel->bl_config.bl_level > 0)) {
+		pr_debug("dsi:start pcd check\n");
+		dsi_panel_read_pcd_reg(panel, false);
+	}
 
        return rc;
 };
@@ -3175,9 +3181,12 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-apl-off-command",
 	"qcom,mdss-dsi-pcd-check-enable-command",
 	"qcom,mdss-dsi-pcd-check-disable-command",
+	"qcom,mdss-dsi-pcd-check-in-enable-command",
+	"qcom,mdss-dsi-pcd-check-in-disable-command",
 	"qcom,mdss-dsi-partition-refreshrate-on-command",
 	"qcom,mdss-dsi-partition-refreshrate-off-command",
 	"qcom,mdss-dsi-lp3-command",
+	"qcom,mdss-dsi-panel-pcd-reg-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -3243,9 +3252,12 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-apl-off-command-state",
 	"qcom,mdss-dsi-pcd-check-enable-command-state",
 	"qcom,mdss-dsi-pcd-check-disable-command-state",
+	"qcom,mdss-dsi-pcd-check-in-enable-command-state",
+	"qcom,mdss-dsi-pcd-check-in-disable-command-state",
 	"qcom,mdss-dsi-partition-refreshrate-on-command-state",
 	"qcom,mdss-dsi-partition-refreshrate-off-command-state",
 	"qcom,mdss-dsi-lp3-command-state",
+	"qcom,mdss-dsi-panel-pcd-reg-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5224,6 +5236,132 @@ static void dsi_panel_cellid_config_deinit(struct drm_panel_cellid_config *celli
 		kfree(cellid_config->return_buf);
 }
 
+static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct drm_panel_pcd_config *pcd_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	pcd_config = &panel->pcd_config;
+	if (!pcd_config)
+		return -EINVAL;
+
+	pcd_config->pcd_reg_enabled = utils->read_bool(utils->data,
+		"qcom,pcd-reg-read-enabled");
+
+	if (!pcd_config->pcd_reg_enabled)
+		return 0;
+
+	dsi_panel_parse_cmd_sets_sub(&pcd_config->pcd_reg_cmd,
+				DSI_CMD_SET_PANEL_PCD_REG, utils);
+	if (!pcd_config->pcd_reg_cmd.count) {
+		DSI_ERR("panel pcd_reg command parsing failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+	rc = utils->read_u32(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-read-length",
+		&(pcd_config->pcd_reg_rlen));
+	if (rc) {
+		DSI_ERR("%s:qcom,mdss-dsi-panel-pcd-reg-read-length, set it to 1\n", __func__);
+		pcd_config->pcd_reg_rlen = 1;
+	}
+
+	rc = utils->read_u32(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-offset",
+		&(pcd_config->pcd_reg_offset));
+	if (rc) {
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-offset, set it to 0\n", __func__);
+		pcd_config->pcd_reg_offset = 0;
+	}
+
+	rc = utils->read_u32(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-mask",
+		&(pcd_config->pcd_reg_mask));
+	if (rc) {
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-mask, set it to 0\n", __func__);
+		pcd_config->pcd_reg_mask = 0;
+	}
+
+	pcd_config->return_buf = kcalloc(pcd_config->pcd_reg_rlen,
+			sizeof(unsigned char), GFP_KERNEL);
+	if (!pcd_config->return_buf) {
+		DSI_ERR("%s:kcalloc for return_buf error \n", __func__);
+		rc = -ENOMEM;
+		goto error;
+	}
+
+	pcd_config->check_before_read = utils->read_bool(utils->data, "qcom,pcd-reg-check-before-read");
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-min",
+		&(pcd_config->pcd_reg_pass_min));
+	if (rc)
+		pcd_config->pcd_reg_pass_min = 0;
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-max",
+		&(pcd_config->pcd_reg_pass_max));
+	if (rc) {
+		pcd_config->pcd_reg_pass_max = 0;
+		DSI_WARN("%s:warn: qcom,mdss-dsi-panel-pcd-reg-pass-max not set\n", __func__);
+	}
+	else
+		pcd_config->pcd_reg_status = 1;  //If a max value is configured, the PCD check is considered active. Default status is OK.
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-array-size",
+		&(pcd_config->pcd_reg_pass_array_size));
+	if (rc || !pcd_config->pcd_reg_pass_array_size) {
+		pcd_config->pcd_reg_pass_array_size = 1;
+		DSI_WARN("%s:warn: qcom,mdss-dsi-panel-pcd-reg-pass-array-size set default 1\n", __func__);
+	}
+
+	rc = utils->read_u32_array(utils->data,
+		"qcom,mdss-dsi-panel-pcd-reg-pass-array",
+		pcd_config->pcd_reg_pass_array, pcd_config->pcd_reg_pass_array_size);
+	if (rc) {
+		pcd_config->pcd_reg_pass_array_size = 0;
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-pass-array not set\n", __func__);
+	}
+	else
+		pcd_config->pcd_reg_status = 1;  //set 1 for default OK status when pass array set
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-seq-interval", &(pcd_config->check_seq_interval));
+	if (rc) {
+		pcd_config->check_seq_interval = PCD_REG_SEQ_INTERVAL_DEFAULT;
+		DSI_DEBUG("%s:warn:qcom,mdss-dsi-panel-pcd-reg-seq-interval set default %d\n", __func__, PCD_REG_SEQ_INTERVAL_DEFAULT);
+	}
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-check-time-interval-in-minutes", &(pcd_config->check_interval_in_mins));
+	if (rc) {
+		pcd_config->check_interval_in_mins = PCD_REG_CHECK_INTERVAL_IN_MINUTES;
+		DSI_DEBUG("%s:qcom,mdss-dsi-panel-pcd-check-time-interval-in-minutes set default %d\n", __func__, pcd_config->check_interval_in_mins);
+	}
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-read-delay-ms", &(pcd_config->pcd_reg_read_delay_ms));
+	if (rc) {
+		pcd_config->pcd_reg_read_delay_ms = 150;
+		DSI_DEBUG("%s: qcom,mdss-dsi-panel-pcd-reg-read-delay-ms not set, use default:%d\n", __func__, pcd_config->pcd_reg_read_delay_ms);
+	}
+	else
+		DSI_INFO("%s:qcom,mdss-dsi-panel-pcd-reg-read-delay-ms set:%d\n", __func__, pcd_config->pcd_reg_read_delay_ms);
+
+	return 0;
+error:
+	pcd_config->pcd_reg_enabled = false;
+	return rc;
+}
+
+static void dsi_panel_pcd_config_deinit(struct drm_panel_pcd_config *pcd_config)
+{
+	if (pcd_config->return_buf)
+		kfree(pcd_config->return_buf);
+}
+
 static int dsi_panel_parse_apl_config(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -5568,6 +5706,8 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
 	panel->esd_first_check = false;
 	panel->check_pcd = of_property_read_bool(of_node,
 				"qcom,check_pcd");
+	panel->check_in_pcd = of_property_read_bool(of_node,
+				"qcom,check_in_pcd");
 	return rc;
 }
 
@@ -5801,6 +5941,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (rc)
 		DSI_DEBUG("failed to parse local cellid config, rc=%d\n", rc);
 
+	rc = dsi_panel_parse_pcd_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse pcd reg config, rc=%d\n", rc);
+
 	rc = dsi_panel_parse_apl_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse local apl config, rc=%d\n", rc);
@@ -5844,6 +5988,7 @@ void dsi_panel_put(struct dsi_panel *panel)
 	dsi_panel_esd_config_deinit(&panel->esd_config);
 	dsi_panel_cellid_config_deinit(&panel->cellid_config);
 	dsi_panel_lhbm_config_deinit(&panel->lhbm_config);
+	dsi_panel_pcd_config_deinit(&panel->pcd_config);
 
 	kfree(panel->avr_caps.avr_step_fps_list);
 	kfree(panel);
@@ -7697,6 +7842,68 @@ error:
 	return rc;
 }
 
+int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel)
+{
+	int rc = 0, i = 0;
+	ssize_t len;
+	struct dsi_cmd_desc *cmds;
+	struct drm_panel_pcd_config *pcd_config;
+	enum dsi_cmd_set_state state;
+	u32 count;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	pcd_config = &panel->pcd_config;
+	if (!pcd_config) {
+		DSI_ERR("pcd_config is null\n");
+		return -EINVAL;
+	}
+
+	len = pcd_config->pcd_reg_rlen;
+	count = pcd_config->pcd_reg_cmd.count;
+	cmds = pcd_config->pcd_reg_cmd.cmds;
+	state = pcd_config->pcd_reg_cmd.state;
+
+	if (count == 0) {
+		DSI_INFO("[%s] No DSI_CMD_SET_PANEL_PCD_REG commands to be sent\n",
+			 panel->name);
+		goto error;
+	}
+
+	dsi_panel_acquire_panel_lock(panel);
+	for (i = 0; i < count; i++) {
+		cmds->ctrl_flags = 0;
+
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		if (cmds->msg.type == MIPI_DSI_DCS_READ) {
+			cmds->msg.flags |= MIPI_DSI_MSG_UNICAST_COMMAND;
+			cmds->msg.rx_buf = pcd_config->return_buf;
+			cmds->msg.rx_len = (pcd_config->pcd_reg_rlen > MAX_PANEL_PCD_REG_LEN) ?
+							 MAX_PANEL_PCD_REG_LEN : pcd_config->pcd_reg_rlen;
+			cmds->ctrl_flags = DSI_CTRL_CMD_READ;
+		}
+
+		len = dsi_host_transfer_sub(panel->host, cmds, false);
+		if (len < 0) {
+			rc = len;
+			DSI_ERR("failed to set DSI_CMD_SET_PANEL_PCD_REG  cmds, rc=%d\n", rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	dsi_panel_release_panel_lock(panel);
+	return rc;
+}
+
 void set_panelpcdcheck_enable(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -7717,5 +7924,238 @@ void set_panelpcdcheck_enable(struct dsi_panel *panel)
 		       panel->name, rc);
 
 	mutex_unlock(&panel->panel_lock);
+}
 
+int set_panelpcdcheck_in_enable(struct dsi_panel *panel, bool check_en)
+{
+	int rc = 0;
+
+	if (!panel) {
+		DSI_ERR("Invalid params\n");
+	}
+	mutex_lock(&panel->panel_lock);
+
+	if (!panel->panel_send_cmd){
+		rc = -ENODEV;
+		DSI_INFO("[%s] panel disabled, skip panel pcd check enable %d\n", panel->name, check_en);
+		goto error;
+	}
+
+	if(check_en) {
+		printk("Panel pcd check enable\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_CHECKIN_ENABLE, false);
+	}else{
+		printk("susan Panel pcd check disable\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_CHECKIN_DISABLE, false);
+	}
+	if (rc)
+		DSI_ERR("[%s] failed to send PCD cmds for en:%d, rc=%d\n",
+		       panel->name, check_en, rc);
+	else {
+		panel->pcd_config.pcd_reg_checkable = check_en;
+		if (check_en)
+			pr_info("%s:dsi set pcd_reg_checkable:%d\n", __func__, panel->pcd_config.pcd_reg_checkable);
+	}
+
+error:
+	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
+void dsi_panel_check_pcd_read_flag(struct dsi_panel *panel) {
+	if (panel->pcd_config.pcd_reg_enabled) {
+		int interval = panel->pcd_config.check_seq_interval;
+
+		if ((panel->pcd_config.check_seq_count < 2) && interval >= 10) {
+			//skip first five screen on seq for power on performance after reboot
+			//the screen on counts may increase fast if aod display enabled
+			panel->pcd_config.check_seq_count = interval - 5;
+			pr_info("%s: init check_seq_count:%d, interval:%d\n", __func__, panel->pcd_config.check_seq_count, interval);
+			goto end;
+		}
+
+		if (interval && !(panel->pcd_config.check_seq_count % interval)) {
+			panel->pcd_config.pcd_reg_read_flag = 1;
+			pr_debug("dsi: set pcd_reg_read_flag 1, check_seq_count:%d, interval:%d\n", panel->pcd_config.check_seq_count, interval);
+		}
+		else if (!interval) {
+			panel->pcd_config.pcd_reg_read_flag = 0;
+			pr_warn("%s:warn:check_seq_interval invalid 0, skip\n", __func__);
+		}
+		else
+			pr_debug("dsi:pcd:check_seq_count:%d\n", panel->pcd_config.check_seq_count);
+	}
+	else
+		pr_debug("pcd reg enabled:%d, skip\n", panel->pcd_config.pcd_reg_enabled);
+
+end:
+	return;
+}
+
+void dsi_panel_parse_pcd_status(struct dsi_panel *panel) {
+
+	if (!panel) {
+		pr_info("%s: panel NULL, return\n", __func__);
+		return;
+	}
+
+	//parser panel status
+	panel->pcd_config.pcd_reg_status = 0;
+	if (panel->pcd_config.pcd_reg_pass_max) {
+		if ((panel->pcd_config.pcd_reg_val >= panel->pcd_config.pcd_reg_pass_min)
+				&& (panel->pcd_config.pcd_reg_val <= panel->pcd_config.pcd_reg_pass_max)) {
+			//valid reg
+			panel->pcd_config.pcd_reg_status = 1;
+		}
+		else {
+			//NG
+			pr_warn("%s: warn: abnormal pcd reg val:0x%02x, max:0x%02x, min:0x%02x\n", __func__,
+						panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_pass_max, panel->pcd_config.pcd_reg_pass_min);
+		}
+	}
+	else if (panel->pcd_config.pcd_reg_pass_array_size) {
+		for(int i = 0; i < panel->pcd_config.pcd_reg_pass_array_size; i++) {
+			if (panel->pcd_config.pcd_reg_val == panel->pcd_config.pcd_reg_pass_array[i]) {
+				//valid reg
+				panel->pcd_config.pcd_reg_status = 1;
+				break;
+			}
+		}
+	}
+	else {
+		pr_info("%s: not set reg pass check values, return\n", __func__);
+	}
+
+	if (panel->pcd_config.pcd_reg_status) {
+		//valid reg status 1
+		panel->pcd_config.retry_count = 0;
+		pr_info("%s: panel pcd reg: 0x%02x, hw status:%d ok\n", __func__, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status);
+	}
+	else if (panel->pcd_config.pcd_reg_val) {
+		//NG reg value, set status 0xFF
+		panel->pcd_config.pcd_reg_status = 0xFF;
+		panel->pcd_config.retry_count = 0;
+		pr_info("%s: warn: abnormal panel pcd reg: 0x%02x, hw status:%d\n", __func__, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status);
+	}
+	else {
+		//get 0 and not valid reg, retry check
+		if (panel->pcd_config.retry_count < PCD_REG_CHECK_RETRY_MAX) {
+			panel->pcd_config.retry_count++;
+			pr_info("%s: warn: fail get panel pcd reg: 0x%02x, hw status:%d. retry:%d\n",
+						__func__, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status, panel->pcd_config.retry_count);
+		} else {
+			//get 0 but retry max, stop retry in this session. set reg_status 0
+			panel->pcd_config.pcd_reg_status = 0;
+			pr_info("%s: warn: retry:%d fail get panel pcd reg: 0x%02x, hw status:%d\n",
+						__func__, panel->pcd_config.retry_count, panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_status);
+		}
+	}
+
+	return;
+}
+
+int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get)
+{
+	int rc = 0;
+	int offset, value, pcd_reg_len = 0;
+	u8* pcd_reg;
+
+	if (!panel) {
+		pr_info("%s: panel NULL, return\n", __func__);
+		return -EINVAL;
+	}
+
+	if(!panel->pcd_config.pcd_reg_enabled) {
+		pr_info("PCD reg reading is not enabled, skipping.\n");
+		return 0;
+	}
+
+	if(panel->bl_config.bl_level <= 0) {
+		pr_info("pcd reg support when screen on, skip and return\n");
+		return 0;
+	}
+
+	if (panel->pcd_config.retry_count && panel->pcd_config.retry_count <= PCD_REG_CHECK_RETRY_MAX)
+		force_get = true;
+
+	//read pcd reg
+	if (panel->pcd_config.pcd_reg_read_flag || force_get) {
+		if (!force_get) {
+			ktime_t cur_ktime;
+			struct timespec64 cur_ts;
+			u64 last_tv_sec = panel->pcd_config.check_last_timestamp;
+			u32 check_mins = panel->pcd_config.check_interval_in_mins;
+			u32 check_secs = 60 * check_mins;
+
+			//check time interval
+			pr_debug("%s:get boottime start\n", __func__);
+			cur_ktime = ktime_get_boottime();
+			cur_ts = ktime_to_timespec64(cur_ktime);
+			if (!last_tv_sec) {
+				panel->pcd_config.check_last_timestamp = cur_ts.tv_sec;
+				pr_info("%s: keep init check_last_timestamp:%llu\n", __func__, panel->pcd_config.check_last_timestamp);
+			}
+			else {
+				u64 time_gap = cur_ts.tv_sec - last_tv_sec;
+				pr_debug("%s: last read time tv_sec:%lld, cur tv_sec:%lld", __func__, last_tv_sec, cur_ts.tv_sec);
+				if (time_gap < check_secs) {
+					panel->pcd_config.pcd_reg_read_flag = 0;
+					pr_info("%s: time gap:%lld NOT match check interval=%dmins=%ds, skip for next check session\n", __func__, time_gap, check_mins, check_secs);
+					return 0;
+				}
+				else {
+					panel->pcd_config.check_last_timestamp = cur_ts.tv_sec;
+					pr_debug("%s: time gap:%lld match check interval=%dmins=%ds, keep timestamp:%lld\n", __func__, time_gap, check_mins, check_secs, panel->pcd_config.check_last_timestamp);
+				}
+			}
+		}
+
+		if (panel->pcd_config.check_before_read) {
+			//enable pcd check before read
+			pr_info("panel pcd check need enable before read, will read in next session\n");
+			rc = set_panelpcdcheck_in_enable(panel, 1);
+			if (rc < 0 || !panel->pcd_config.pcd_reg_checkable) {
+				pr_info("%s: fail enable pcd check, pcd_reg_checkable 0", __func__);
+				return -1;
+			}
+			else {
+				//delay for read reg.
+				if (panel->pcd_config.pcd_reg_read_delay_ms) {
+					u32 delay_us = 1000*panel->pcd_config.pcd_reg_read_delay_ms;
+					usleep_range(delay_us, delay_us + 10);
+				}
+			}
+		}
+
+		rc = dsi_panel_tx_pcd_reg_cmd(panel);
+		if (rc >= 0){
+			//get pcd reg val
+			pcd_reg_len = (panel->pcd_config.pcd_reg_rlen > MAX_PANEL_PCD_REG_LEN) ?
+								 	MAX_PANEL_PCD_REG_LEN : panel->pcd_config.pcd_reg_rlen;
+			pcd_reg = panel->pcd_config.return_buf;
+			offset = (panel->pcd_config.pcd_reg_offset >= pcd_reg_len) ?
+								 	(pcd_reg_len -1) : panel->pcd_config.pcd_reg_offset;
+
+			value = pcd_reg[offset];
+			if (panel->pcd_config.pcd_reg_mask) {
+				value = value & panel->pcd_config.pcd_reg_mask;
+				pr_debug("%s: pcd[%d]:0x%02x & 0x%02x = 0x%02x", __func__, offset, pcd_reg[offset], panel->pcd_config.pcd_reg_mask, value);
+			}
+			panel->pcd_config.pcd_reg_val = value;
+
+			//parser pcd status
+			dsi_panel_parse_pcd_status(panel);
+		}
+		//disable pcd panel check
+		panel->pcd_config.pcd_reg_read_flag = 0;
+		if (panel->pcd_config.check_before_read && panel->pcd_config.pcd_reg_checkable){
+			rc = set_panelpcdcheck_in_enable(panel, 0);
+			if (rc < 0){
+				pr_info("%s: disable pcd check fail", __func__);
+			}
+		}
+		pr_info("%s: pcd reg: 0x%02x, disable read_flag:0\n", __func__, panel->pcd_config.pcd_reg_val);
+	}
+
+	return rc;
 }
