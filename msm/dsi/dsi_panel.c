@@ -1288,8 +1288,8 @@ static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
 
         param_map = panel_param->val_map;
 
-	DSI_INFO("%s: param_name=%s; val_max =%d, default_value=%d, value=%d\n",
-	        __func__, panel_param->param_name, panel_param->val_max,
+	DSI_INFO("%s: [%s], param_name=%s; val_max =%d, default_value=%d, value=%d\n",
+	        __func__, panel->name, panel_param->param_name, panel_param->val_max,
 		panel_param->default_value, panel_param->value);
 
 	mutex_lock(&panel->panel_lock);
@@ -7578,7 +7578,7 @@ int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel)
 	if (count == 0) {
 		DSI_INFO("[%s] No DSI_CMD_SET_PANEL_PCD_REG commands to be sent\n",
 			 panel->name);
-		goto error;
+		return -EINVAL;
 	}
 
 	if (panel->panel_trueaod_state) {
@@ -7587,6 +7587,13 @@ int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel)
 	}
 
 	dsi_panel_acquire_panel_lock(panel);
+
+	if (!panel->panel_send_cmd) {
+		rc = -ENODEV;
+		DSI_INFO("[%s] panel disabled, skip panel pcd reg read\n", panel->name);
+		goto error;
+	}
+
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
 
@@ -7617,7 +7624,7 @@ error:
 	return rc;
 }
 
-void set_panelpcdcheck_enable(struct dsi_panel *panel, bool check_en)
+int set_panelpcdcheck_enable(struct dsi_panel *panel, bool check_en)
 {
 	int rc = 0;
 
@@ -7627,10 +7634,17 @@ void set_panelpcdcheck_enable(struct dsi_panel *panel, bool check_en)
 
 	if (panel->panel_trueaod_state) {
 		DSI_INFO("%s:dsi: panel in aod, skip\n", __func__);
-		return;
+		return 0;
 	}
 
 	mutex_lock(&panel->panel_lock);
+
+	if (!panel->panel_send_cmd) {
+		rc = -ENODEV;
+		DSI_INFO("[%s] panel disabled, skip panel pcd check enable %d\n", panel->name, check_en);
+		goto error;
+	}
+
 	if(check_en) {
 		printk("Panel pcd check enable\n");
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PCD_ENABLE);
@@ -7647,7 +7661,9 @@ void set_panelpcdcheck_enable(struct dsi_panel *panel, bool check_en)
 			pr_info("%s:dsi set pcd_reg_checkable:%d\n", __func__, panel->pcd_config.pcd_reg_checkable);
 	}
 
+error:
 	mutex_unlock(&panel->panel_lock);
+	return rc;
 
 }
 
@@ -7797,8 +7813,8 @@ int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get)
 		if (panel->pcd_config.check_before_read) {
 			//enable pcd check before read
 			pr_info("panel pcd check need enable before read, will read in next session\n");
-			set_panelpcdcheck_enable(panel, 1);
-			if (!panel->pcd_config.pcd_reg_checkable) {
+			rc = set_panelpcdcheck_enable(panel, 1);
+			if (rc < 0 || !panel->pcd_config.pcd_reg_checkable) {
 				pr_info("%s: fail enable pcd check, pcd_reg_checkable 0", __func__);
 				return -1;
 			}
@@ -7815,34 +7831,38 @@ int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get)
 			DSI_INFO("%s: panel in aod, skip\n", __func__);
 			return 0;
 		}
-		dsi_panel_tx_pcd_reg_cmd(panel);
+		rc = dsi_panel_tx_pcd_reg_cmd(panel);
+		if(rc >= 0) {
+			//get pcd reg val
+			pcd_reg_len = (panel->pcd_config.pcd_reg_rlen > MAX_PANEL_PCD_REG_LEN) ?
+									MAX_PANEL_PCD_REG_LEN : panel->pcd_config.pcd_reg_rlen;
+			pcd_reg = panel->pcd_config.return_buf;
+			offset = (panel->pcd_config.pcd_reg_offset >= pcd_reg_len) ?
+									(pcd_reg_len -1) : panel->pcd_config.pcd_reg_offset;
 
-		//get pcd reg val
-		pcd_reg_len = (panel->pcd_config.pcd_reg_rlen > MAX_PANEL_PCD_REG_LEN) ?
-								 MAX_PANEL_PCD_REG_LEN : panel->pcd_config.pcd_reg_rlen;
-		pcd_reg = panel->pcd_config.return_buf;
-		offset = (panel->pcd_config.pcd_reg_offset >= pcd_reg_len) ?
-								 (pcd_reg_len -1) : panel->pcd_config.pcd_reg_offset;
-
-		value = pcd_reg[offset];
-		if (panel->pcd_config.pcd_value_2bytes && (pcd_reg_len > 1)
-			&& (offset < (pcd_reg_len-1))) {
-			value = pcd_reg[offset] <<8 | pcd_reg[offset+1];
+			value = pcd_reg[offset];
+			if (panel->pcd_config.pcd_value_2bytes && (pcd_reg_len > 1)
+				&& (offset < (pcd_reg_len-1))) {
+				value = pcd_reg[offset] <<8 | pcd_reg[offset+1];
 		}
 
-		if (panel->pcd_config.pcd_reg_mask) {
-			value = value & panel->pcd_config.pcd_reg_mask;
+			if (panel->pcd_config.pcd_reg_mask) {
+				value = value & panel->pcd_config.pcd_reg_mask;
 			pr_info("%s: pcd[%d]:0x%02x & 0x%02x = 0x%02x", __func__, offset, pcd_reg[offset], panel->pcd_config.pcd_reg_mask, value);
+			}
+			panel->pcd_config.pcd_reg_val = value;
+
+			//parser pcd status
+			dsi_panel_parse_pcd_status(panel);
 		}
-		panel->pcd_config.pcd_reg_val = value;
-
-		//parser pcd status
-		dsi_panel_parse_pcd_status(panel);
-
 		//disable pcd panel check
 		panel->pcd_config.pcd_reg_read_flag = 0;
-		if (panel->pcd_config.check_before_read && panel->pcd_config.pcd_reg_checkable)
-			set_panelpcdcheck_enable(panel, 0);
+		if (panel->pcd_config.check_before_read && panel->pcd_config.pcd_reg_checkable) {
+			rc = set_panelpcdcheck_enable(panel, 0);
+			if (rc < 0) {
+				pr_info("%s: disable pcd check fail", __func__);
+			}
+		}
 
 		pr_info("%s: pcd reg: 0x%02x, disable read_flag:0\n", __func__, panel->pcd_config.pcd_reg_val);
 	}
