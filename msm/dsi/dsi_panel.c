@@ -83,6 +83,7 @@ static int isl97900_led_event(struct device_node *node, enum isl_function event,
 #define DCS_COMMAND_THRESHOLD_TIME_US 40
 #define DSI_PANEL_UNKNOWN_PANEL_NAME	"unknown"
 #define DSI_PANEL_PANEL_DEFAULT_VER 	0xffffffffffffffff
+#define BACKLIGHT_LOG_STEP 100
 
 static struct panel_param_val_map hbm_map[HBM_STATE_NUM] = {
 	{HBM_OFF_STATE, DSI_CMD_SET_HBM_OFF, NULL},
@@ -1017,8 +1018,13 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	else{
 		if (bl->bl_2bytes_enable)
 		    bl_lvl = ((bl_lvl & 0xff00) >> 8) | ((bl_lvl & 0xff) << 8);
-		pr_info("set_backlight wirte lvl:%d\n", panel->bl_config.brightness_updated);
 		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
+		if(panel->bl_config.old_brightness/BACKLIGHT_LOG_STEP !=
+			panel->bl_config.brightness_updated/BACKLIGHT_LOG_STEP){
+		    pr_info("set_backlight write lvl:brightness_updated = %d old_brightness = %d\n",
+				panel->bl_config.brightness_updated, panel->bl_config.old_brightness);
+		}
+		panel->bl_config.old_brightness = panel->bl_config.brightness_updated;
     }
 
        // Workaround for the panel which failed to set the first postive brightness value
