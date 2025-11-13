@@ -9512,6 +9512,7 @@ int dsi_display_set_mode(struct dsi_display *display,
 	int rc = 0;
 	struct dsi_display_mode adj_mode;
 	struct dsi_mode_info timing;
+	int i = 0;
 
 	if (!display || !mode || !display->panel) {
 		DSI_ERR("Invalid params\n");
@@ -9557,6 +9558,15 @@ int dsi_display_set_mode(struct dsi_display *display,
 			timing.h_active, timing.v_active, timing.refresh_rate,
 			adj_mode.priv_info->clk_rate_hz);
 
+	if(display->panel->switch_delay_config.switch_delay_enabled) {
+		for(i = 0; i < display->panel->switch_delay_config.orig_timing_list_len; i++) {
+			if(display->panel->switch_delay_config.orig_timing_list[i] == display->panel->cur_mode->timing.refresh_rate
+			  && display->panel->switch_delay_config.active_timing_list[i] == timing.refresh_rate) {
+				display->panel->switch_delay_config.switch_delay_ms = display->panel->switch_delay_config.switch_delay_list[i];
+				break;
+			  }
+		}
+	}
 	memcpy(display->panel->cur_mode, &adj_mode, sizeof(adj_mode));
 error:
 	mutex_unlock(&display->display_lock);
