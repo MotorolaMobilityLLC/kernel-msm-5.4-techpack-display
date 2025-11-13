@@ -2640,6 +2640,31 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		dfps_caps->current_fps = dfps_caps->panel_on_fps;
 	}
 
+	dfps_caps->dfps_cmd_delay_effect_support = false;
+	dfps_caps->dfps_cmd_delay_effect_list_len = utils->count_u32_elems(utils->data,
+					"qcom,dsi-supported-dfps-cmd-delay-effect-list");
+	if (dfps_caps->dfps_cmd_delay_effect_list_len > 0) {
+		dfps_caps->dfps_cmd_delay_effect_list = kcalloc(dfps_caps->dfps_cmd_delay_effect_list_len, sizeof(u32),
+				GFP_KERNEL);
+		if (!dfps_caps->dfps_cmd_delay_effect_list) {
+			rc = -ENOMEM;
+			goto error;
+		}
+
+		rc = utils->read_u32_array(utils->data,
+				"qcom,dsi-supported-dfps-cmd-delay-effect-list",
+				dfps_caps->dfps_cmd_delay_effect_list,
+				dfps_caps->dfps_cmd_delay_effect_list_len);
+		if (rc) {
+			DSI_ERR("[%s] dfps cmd delay effect list parse failed\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+		dfps_caps->dfps_cmd_delay_effect_support = true;
+
+		DSI_INFO("[%s] dfps cmd delay effect list parse success\n", name);
+	}
+
 	if(dfps_caps->type == DSI_DFPS_IMMEDIATE_CUS){
         	dfps_caps->dfps_vfp_list_len = utils->count_u32_elems(utils->data,
         				  "qcom,dsi-supported-dfps-vfp-list");
@@ -2993,6 +3018,10 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dfps-120-command",
 	"qcom,mdss-dsi-dfps-144-command",
 	"qcom,mdss-dsi-dfps-165-command",
+	"qcom,mdss-dsi-dfps-60-delay-command",
+	"qcom,mdss-dsi-dfps-90-delay-command",
+	"qcom,mdss-dsi-dfps-120-delay-command",
+	"qcom,mdss-dsi-dfps-144-delay-command",
 	"qcom,mdss-dsi-panel-cellid-command",
 	"qcom,mdss-dsi-panel-apl-on-command",
 	"qcom,mdss-dsi-panel-apl-off-command",
@@ -3054,6 +3083,10 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dfps-120-command-state",
 	"qcom,mdss-dsi-dfps-144-command-state",
 	"qcom,mdss-dsi-dfps-165-command-state",
+	"qcom,mdss-dsi-dfps-60-delay-command-state",
+	"qcom,mdss-dsi-dfps-90-delay-command-state",
+	"qcom,mdss-dsi-dfps-120-delay-command-state",
+	"qcom,mdss-dsi-dfps-144-delay-command-state",
 	"qcom,mdss-dsi-panel-cellid-command-state",
 	"qcom,mdss-dsi-panel-apl-on-command-state",
 	"qcom,mdss-dsi-panel-apl-off-command-state",
@@ -5904,6 +5937,7 @@ void dsi_panel_put(struct dsi_panel *panel)
 	dsi_panel_pcd_config_deinit(&panel->pcd_config);
 
 	kfree(panel->avr_caps.avr_step_fps_list);
+	kfree(panel->dfps_caps.dfps_cmd_delay_effect_list);
 	kfree(panel);
 }
 
@@ -7450,15 +7484,30 @@ int dsi_panel_dfps_send_cmd(struct dsi_panel *panel)
 	char cmd_set_prop[64];
 	int rc = 0;
 	bool async = false;
+	bool dfps_cmd_delay_effect_list_match = false;
 
 	if (!panel || !panel->cur_mode)
 		return -EINVAL;
+
+	struct dsi_dfps_capabilities *dfps_caps = &panel->dfps_caps;
 
 	mutex_lock(&panel->panel_lock);
 	mode = panel->cur_mode;
 	refresh_rate = panel->cur_mode->timing.refresh_rate;
 
-	snprintf(cmd_set_prop, sizeof(cmd_set_prop), "qcom,mdss-dsi-dfps-%d-command", refresh_rate);
+	if (dfps_caps->dfps_cmd_delay_effect_support) {
+		for (i = 0; i < dfps_caps->dfps_cmd_delay_effect_list_len; i++) {
+			if (panel->dfps_caps.current_fps == dfps_caps->dfps_cmd_delay_effect_list[i]) {
+				dfps_cmd_delay_effect_list_match = true;
+				break;
+			}
+		}
+	}
+
+	if (dfps_cmd_delay_effect_list_match)
+		snprintf(cmd_set_prop, sizeof(cmd_set_prop), "qcom,mdss-dsi-dfps-%d-delay-command", refresh_rate);
+	else
+		snprintf(cmd_set_prop, sizeof(cmd_set_prop), "qcom,mdss-dsi-dfps-%d-command", refresh_rate);
 
 	for (i = DSI_CMD_SET_PRE_ON; i < DSI_CMD_SET_MAX; i++) {
 		if (!strcmp(cmd_set_prop, cmd_set_prop_map[i])) {

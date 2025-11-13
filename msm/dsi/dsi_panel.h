@@ -129,12 +129,15 @@ struct dsi_dfps_capabilities {
 	bool dfps_support;
 	bool dfps_send_cmd_support;
 	bool dfps_send_cmd_with_te_async;
+	bool dfps_cmd_delay_effect_support;
 	u32 panel_on_fps;
 	u32 current_fps;
 	u32 *dfps_vfp_list;
 	u32 dfps_vfp_list_len;
 	u32 *dfps_hfp_list;
 	u32 dfps_hfp_list_len;
+	u32 *dfps_cmd_delay_effect_list;
+	int dfps_cmd_delay_effect_list_len;
 };
 
 struct dsi_qsync_capabilities {
