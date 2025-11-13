@@ -5716,6 +5716,123 @@ static void dsi_panel_cellid_config_deinit(struct drm_panel_cellid_config *celli
 		kfree(cellid_config->return_buf);
 }
 
+static int dsi_panel_parse_switch_delay_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct drm_panel_switch_delay_config *switch_delay_config;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		DSI_ERR("Invalid Params\n");
+		return -EINVAL;
+	}
+	switch_delay_config = &panel->switch_delay_config;
+	if (!switch_delay_config)
+		return -EINVAL;
+
+	switch_delay_config->switch_delay_enabled = utils->read_bool(utils->data,
+		"qcom,switch-timing-delay-enabled");
+	if (!switch_delay_config->switch_delay_enabled){
+		DSI_ERR("switch_delay_config->switch_delay_enabled = %d\n",switch_delay_config->switch_delay_enabled);
+		return 0;
+	}
+
+    switch_delay_config->orig_timing_list_len = utils->count_u32_elems(utils->data,
+		"qcom,switch-orig-timing-list");
+    if (switch_delay_config->orig_timing_list_len < 1) {
+        DSI_ERR("dsi_panel_parse_switch_delay_config switch orig timing list not present\n");
+        rc = -EINVAL;
+        goto error;
+    }
+
+    switch_delay_config->orig_timing_list = kcalloc(switch_delay_config->orig_timing_list_len, sizeof(u32),
+        			GFP_KERNEL);
+    if (!switch_delay_config->orig_timing_list) {
+        rc = -ENOMEM;
+        goto error;
+    }
+	rc = utils->read_u32_array(utils->data,
+			"qcom,switch-orig-timing-list",
+			switch_delay_config->orig_timing_list,
+			switch_delay_config->orig_timing_list_len);
+	if (rc) {
+		DSI_ERR("switch-orig-timing-list parse failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+
+    switch_delay_config->active_timing_list_len = utils->count_u32_elems(utils->data,
+		"qcom,switch-active-timing-list");
+    if (switch_delay_config->active_timing_list_len < 1 || switch_delay_config->active_timing_list_len !=
+		switch_delay_config->orig_timing_list_len) {
+        DSI_ERR("dsi_panel_parse_switch_delay_config switch active timing list not present\n");
+        rc = -EINVAL;
+        goto error;
+    }
+
+    switch_delay_config->active_timing_list = kcalloc(switch_delay_config->active_timing_list_len, sizeof(u32),
+        			GFP_KERNEL);
+    if (!switch_delay_config->active_timing_list) {
+        rc = -ENOMEM;
+        goto error;
+    }
+
+	rc = utils->read_u32_array(utils->data,
+			"qcom,switch-active-timing-list",
+			switch_delay_config->active_timing_list,
+			switch_delay_config->active_timing_list_len);
+	if (rc) {
+		DSI_ERR("switch-orig-timing-list parse failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+    switch_delay_config->switch_delay_list_len = utils->count_u32_elems(utils->data,
+		"qcom,switch-delay-list");
+    if (switch_delay_config->switch_delay_list_len < 1 || switch_delay_config->switch_delay_list_len !=
+		switch_delay_config->orig_timing_list_len) {
+        DSI_ERR("dsi_panel_parse_switch_delay_config switch switch timing list not present\n");
+        rc = -EINVAL;
+        goto error;
+    }
+
+    switch_delay_config->switch_delay_list = kcalloc(switch_delay_config->switch_delay_list_len, sizeof(u32),
+        			GFP_KERNEL);
+    if (!switch_delay_config->switch_delay_list) {
+        rc = -ENOMEM;
+        goto error;
+    }
+	rc = utils->read_u32_array(utils->data,
+		"qcom,switch-delay-list",
+		switch_delay_config->switch_delay_list,
+		switch_delay_config->switch_delay_list_len);
+	if (rc) {
+		DSI_ERR("switch-orig-timing-list parse failed\n");
+		rc = -EINVAL;
+		goto error;
+	}
+	switch_delay_config->switch_delay_ms = 0;
+	return 0;
+error:
+	if (switch_delay_config->orig_timing_list)
+		kfree(switch_delay_config->orig_timing_list);
+	if (switch_delay_config->active_timing_list)
+		kfree(switch_delay_config->active_timing_list);
+	if (switch_delay_config->switch_delay_list)
+		kfree(switch_delay_config->switch_delay_list);
+	switch_delay_config->switch_delay_enabled = false;
+	return rc;
+}
+
+static void dsi_panel_switch_delay_deinit(struct drm_panel_switch_delay_config *switch_delay_config)
+{
+	if (switch_delay_config->orig_timing_list)
+		kfree(switch_delay_config->orig_timing_list);
+	if (switch_delay_config->active_timing_list)
+		kfree(switch_delay_config->active_timing_list);
+	if (switch_delay_config->switch_delay_list)
+		kfree(switch_delay_config->switch_delay_list);
+}
+
 static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -6459,6 +6576,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (rc)
 		DSI_DEBUG("failed to parse local cellid config, rc=%d\n", rc);
 
+	rc = dsi_panel_parse_switch_delay_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local switch delay config, rc=%d\n", rc);
+
 	rc = dsi_panel_parse_pcd_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse pcd reg config, rc=%d\n", rc);
@@ -6517,6 +6638,7 @@ void dsi_panel_put(struct dsi_panel *panel)
 	/* free resources allocated for ESD check */
 	dsi_panel_esd_config_deinit(&panel->esd_config);
 	dsi_panel_cellid_config_deinit(&panel->cellid_config);
+	dsi_panel_switch_delay_deinit(&panel->switch_delay_config);
 	dsi_panel_lhbm_config_deinit(&panel->lhbm_config);
 	dsi_panel_pcd_config_deinit(&panel->pcd_config);
 
@@ -8019,7 +8141,14 @@ int dsi_panel_switch(struct dsi_panel *panel)
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds, rc=%d\n",
 		       panel->name, rc);
-
+	if(panel->switch_delay_config.switch_delay_enabled &&
+		panel->switch_delay_config.switch_delay_ms > 0) {
+		DSI_INFO("[%s] dsi_panel_switch %d\n",
+		       panel->name,panel->switch_delay_config.switch_delay_ms);
+		usleep_range(panel->switch_delay_config.switch_delay_ms*1000,
+				((panel->switch_delay_config.switch_delay_ms*1000)+10));
+		panel->switch_delay_config.switch_delay_ms = 0;
+	}
 	mutex_unlock(&panel->panel_lock);
 
 #if defined(CONFIG_DRM_DYNAMIC_REFRESH_RATE)

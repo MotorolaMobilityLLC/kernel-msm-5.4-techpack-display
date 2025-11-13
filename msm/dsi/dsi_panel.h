@@ -271,6 +271,17 @@ struct drm_panel_cellid_config {
 	u8 *return_buf;
 };
 
+struct drm_panel_switch_delay_config {
+	bool switch_delay_enabled;
+	u32 switch_delay_ms;
+	u32 *orig_timing_list;
+	u32 orig_timing_list_len;
+	u32 *active_timing_list;
+	u32 active_timing_list_len;
+	u32 *switch_delay_list;
+	u32 switch_delay_list_len;
+};
+
 struct drm_panel_pcd_config {
 	bool pcd_reg_enabled;
 	bool pcd_reg_checkable;
@@ -466,6 +477,8 @@ struct dsi_panel {
 	struct dsi_panel_lhbm_config lhbm_config;
 
 	struct drm_panel_cellid_config cellid_config;
+
+	struct drm_panel_switch_delay_config switch_delay_config;
 
 	struct dsi_panel_apl_config apl_config;
 
