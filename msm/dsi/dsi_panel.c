@@ -1081,22 +1081,24 @@ static int dsi_panel_set_od(struct dsi_panel *panel, u32 bl_lvl)
 		return -EINVAL;
 	}
 
-	if (bl_lvl <= panel->od_config.od_threshold) {
+	panel->od_config.od_bl_set = 0;
+
+	if (bl_lvl <= panel->od_config.od_threshold && !panel->od_config.od_state) {
 		od_cmd = &panel->od_config.od_cmd_on;
 		dsi_panel_od_backlight_update(panel, od_cmd);
 		pr_debug("%s: od on with backlight\n", __func__);
 		rc = dsi_panel_tx_send_mot_cmd(panel, od_cmd);
 		panel->od_config.od_state = true;
-		DSI_DEBUG("od config od_config.od_threshold = %d od_config.od_state =%d,bl_lvl = %d\n",
+		DSI_INFO("od config od_config.od_threshold = %d od_config.od_state =%d,bl_lvl = %d\n",
                       panel->od_config.od_threshold,panel->od_config.od_state,bl_lvl);
 	}
-	else if (bl_lvl > panel->od_config.od_threshold) {
+	else if (bl_lvl > panel->od_config.od_threshold && panel->od_config.od_state) {
 		od_cmd = &panel->od_config.od_cmd_off;
 		dsi_panel_od_backlight_update(panel, od_cmd);
 		pr_debug("%s: od off with backlight\n", __func__);
 		rc = dsi_panel_tx_send_mot_cmd(panel, od_cmd);
 		panel->od_config.od_state = false;
-		DSI_DEBUG("od config od_config.od_threshold = %d od_config.od_state =%d,bl_lvl = %d\n",
+		DSI_INFO("od config od_config.od_threshold = %d od_config.od_state =%d,bl_lvl = %d\n",
                       panel->od_config.od_threshold,panel->od_config.od_state,bl_lvl);
 	}
 	if (rc)
@@ -1143,6 +1145,8 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		else {
 			if(panel->od_config.enable)
 				rc = dsi_panel_set_od(panel, bl_lvl);
+			if(panel->od_config.od_bl_set)
+				pr_debug("dsi: backlight set with od cmds, skip\n");
 			else
 				rc = dsi_panel_update_backlight(panel, bl_lvl);
 		}
@@ -5376,8 +5380,8 @@ static int dsi_panel_parse_od_config(struct dsi_panel *panel)
 	if (!od_config->enable)
 		return 0;
 	rc = utils->read_u32(utils->data,
-			"qcom,mdss-dsi-bl-od-threshold",
-			&(od_config->od_threshold));
+		"qcom,mdss-dsi-bl-od-threshold",
+		&(od_config->od_threshold));
 	if (rc) {
 		DSI_ERR("%s:qcom,mdss-dsi-bl-od-threshold is not defined, set it to 0\n", __func__);
 		od_config->od_threshold = 0;
@@ -5399,9 +5403,11 @@ static int dsi_panel_parse_od_config(struct dsi_panel *panel)
 		rc = -EINVAL;
 		goto error;
 	}
+	od_config->od_state = false;
 
 	return 0;
 error:
+	od_config->enable = false;
 	return rc;
 }
 

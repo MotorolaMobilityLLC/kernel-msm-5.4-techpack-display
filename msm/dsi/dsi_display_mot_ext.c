@@ -1904,6 +1904,7 @@ void dsi_panel_od_backlight_update(struct dsi_panel *panel, struct dsi_panel_cmd
 		if (payload[0] == 0x51) {
 			payload[1] = (bl_level & 0xFF00) >> 8;
 			payload[2] = bl_level & 0xFF;
+			panel->od_config.od_bl_set = 1;
 			pr_debug("%s: update od bl payload[0]=0x%02X payload[1]=0x%02X payload[2]=0x%02X\n", __func__, payload[0], payload[1], payload[2]);
 			break;
 		}

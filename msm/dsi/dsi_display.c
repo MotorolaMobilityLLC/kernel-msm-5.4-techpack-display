@@ -280,6 +280,7 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 	}
 	if(panel->bl_config.bl_level == 0 && bl_lvl > 0){
 		panel->bl_config.aod_bl_level = bl_lvl;
+		panel->od_config.od_state = false;
 	}
 
 	lastTrend = curTrend;

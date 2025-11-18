@@ -330,6 +330,7 @@ struct dsi_panel_od_config {
 	u32 od_threshold;
 	struct dsi_panel_cmd_set od_cmd_on;
 	struct dsi_panel_cmd_set od_cmd_off;
+	bool od_bl_set;
 	bool od_state;
 };
 
