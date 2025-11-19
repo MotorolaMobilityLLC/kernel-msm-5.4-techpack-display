@@ -8025,6 +8025,20 @@ int dsi_panel_parse_elvss_config(struct dsi_panel *panel, u8 elv_vl)
 	cmd_elv_set = 1;
 	return 0;
 }
+
+static bool dsi_panel_partition_refreshrate_dfps_is_available(struct dsi_panel *panel){
+	int i;
+
+	if(panel->prr_config.is_prr_under_dfps_support) {
+		for( i = 0; i < panel->prr_config.prr_dfps_list_len; i++) {
+			if(panel->cur_mode->timing.refresh_rate == panel->prr_config.prr_dfps_list[i]) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_panel *panel, enum dsi_cmd_set_type type,
 	int refresh_rate){
 	struct dsi_cmd_desc *cmds;
@@ -8073,7 +8087,7 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 			}
 
 		}
-		if(refresh_rate == 120){
+		if(dsi_panel_partition_refreshrate_dfps_is_available(panel) || refresh_rate == 120){
 		    //update refreshrate1st
 		    if(payload[0] == 0x6B &&  (panel->prr_config.boundaryLine_reg_count + 1) == i &&
 				cmds->msg.tx_len == 15){
@@ -8107,19 +8121,6 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 		cmds++;
 
 	}
-}
-
-static bool dsi_panel_partition_refreshrate_dfps_is_available(struct dsi_panel *panel){
-	int i;
-
-	if(panel->prr_config.is_prr_under_dfps_support) {
-		for( i = 0; i < panel->prr_config.prr_dfps_list_len; i++) {
-			if(panel->cur_mode->timing.refresh_rate == panel->prr_config.prr_dfps_list[i]) {
-				return true;
-			}
-		}
-	}
-	return false;
 }
 
 int dsi_panel_switch(struct dsi_panel *panel)
@@ -8191,13 +8192,22 @@ int dsi_panel_set_partition_refreshrate(struct dsi_panel *panel,
                    DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_DISABLE cmds, rc=%d\n",
                        panel->name, rc);
           }else{
-	        dsi_panel_partition_refreshrate_timming_switch_update(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, timing.refresh_rate);
-	        DSI_INFO("%s: timing.refresh_rate = %d , send DSI_CMD_SET_PANEL_PRR_ENABLE cmd\n", __func__,timing.refresh_rate);
-	        rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, false);
-	        if (rc)
-	            DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_ENABLE cmds, rc=%d\n",
-	            panel->name, rc);
-	        }
+		if(dsi_panel_partition_refreshrate_dfps_is_available(panel)) {
+			dsi_panel_partition_refreshrate_timming_switch_update(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, dsi_display_mode_actual_rr(&timing));
+			DSI_INFO("%s: actual_rr = %d , send DSI_CMD_SET_PANEL_PRR_ENABLE cmd\n", __func__,dsi_display_mode_actual_rr(&timing));
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, false);
+			if (rc)
+				DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_ENABLE cmds, rc=%d\n",
+				panel->name, rc);
+		} else {
+			dsi_panel_partition_refreshrate_timming_switch_update(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, timing.refresh_rate);
+			DSI_INFO("%s: timing.refresh_rate = %d , send DSI_CMD_SET_PANEL_PRR_ENABLE cmd\n", __func__,timing.refresh_rate);
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PANEL_PRR_ENABLE, false);
+			if (rc)
+				DSI_ERR("[%s] failed to send DSI_CMD_SET_PANEL_PRR_ENABLE cmds, rc=%d\n",
+				panel->name, rc);
+			}
+		}
           }
 	mutex_unlock(&panel->panel_lock);
 
