@@ -211,6 +211,7 @@ struct dsi_backlight_config {
 	u32 brightness_updated;
 	bool bl_double_write;
 	u32 aod_bl_level;
+	u32 current_bl_level;
 };
 
 struct dsi_reset_seq {
@@ -305,6 +306,9 @@ struct dsi_panel_lhbm_config {
 	u32 *lhbm_not_allowed_fps_list;
 	u32 lhbm_not_allowed_fps_list_len;
 	u32 	bl_num;
+	bool lhbm_wait_for_bl_valid;
+	u32 lhbm_wait_for_bl_count;
+	u32 lhbm_wait_for_bl_interval;
 };
 
 struct dsi_panel_apl_config {

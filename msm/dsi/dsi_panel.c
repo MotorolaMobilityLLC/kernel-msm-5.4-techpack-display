@@ -1152,6 +1152,8 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		rc = -ENOTSUPP;
 	}
 
+	panel->bl_config.current_bl_level = bl_lvl;
+
 	if(panel->aod_config.bl_vid_update && panel->panel_trueaod_state){
 		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_BACKLIGHT);
 	       rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_CMD_BACKLIGHT);
@@ -1484,6 +1486,40 @@ static int dsi_panel_lhbm_waitfor_fps_valid(struct dsi_panel *panel)
 	return 0;
 }
 
+static int dsi_panel_lhbm_waitfor_bl_valid(struct dsi_panel *panel)
+{
+	u32 count = 30;
+	u32 poll_interval = 1;
+
+	if(panel == NULL) {
+	  pr_err("%s: Invalid panel pointer\n", __func__);
+	  return -EINVAL;
+  }
+
+	count = panel->lhbm_config.lhbm_wait_for_bl_count;
+	if (count == 0)
+		return 0;
+
+	if (panel->lhbm_config.lhbm_wait_for_bl_interval)
+		poll_interval = panel->lhbm_config.lhbm_wait_for_bl_interval;
+
+	pr_info("%s count %d, interval %d\n", __func__, count, poll_interval);
+	while(!(panel->bl_config.current_bl_level)) {
+		if (!count) {
+			pr_warn("%s: it is timeout, and current_bl = %d\n", __func__,
+				panel->bl_config.current_bl_level);
+			break;
+		} else if (count > poll_interval) {
+			usleep_range(poll_interval * 1000, poll_interval *1000+10);
+			count -= poll_interval;
+		} else {
+			usleep_range(count * 1000, count *1000+10);
+			count = 0;
+		}
+	}
+	return 0;
+}
+
 static int dsi_panel_set_hbm(struct dsi_panel *panel,
                         struct msm_param_info *param_info)
 {
@@ -1496,6 +1532,9 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel,
 	if(lhbm_config->enable && param_info->value != HBM_ON_STATE) {
 		dsi_panel_set_local_hbm_param(panel, param_info, lhbm_config);
 	}
+
+	if (panel->lhbm_config.lhbm_wait_for_bl_valid && param_info->value == HBM_FOD_ON_STATE)
+		dsi_panel_lhbm_waitfor_bl_valid(panel);
 
 	if (panel->lhbm_config.lhbm_wait_for_fps_valid && param_info->value == HBM_FOD_ON_STATE)
 		dsi_panel_lhbm_waitfor_fps_valid(panel);
@@ -4981,6 +5020,22 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 			}
 		} else {
 			DSI_INFO("%s:qcom,mdss-dsi-panel-lhbm-wait-fps-valid is not defined\n", __func__);
+		}
+
+		lhbm_config->lhbm_wait_for_bl_valid = utils->read_bool(utils->data,
+			"qcom,mdss-dsi-panel-lhbm-wait-bl-valid");
+
+		if(lhbm_config->lhbm_wait_for_bl_valid) {
+			utils->read_u32(utils->data,
+					"qcom,mdss-dsi-panel-local-hbm-wait-bl-count",
+					&(lhbm_config->lhbm_wait_for_bl_count));
+
+			utils->read_u32(utils->data,
+					"qcom,mdss-dsi-panel-local-hbm-wait-bl-interval",
+					&(lhbm_config->lhbm_wait_for_bl_interval));
+
+		} else {
+			DSI_INFO("%s:qcom,mdss-dsi-panel-lhbm-wait-bl-valid is not defined\n", __func__);
 		}
 
 		rc = utils->read_u32(utils->data,
