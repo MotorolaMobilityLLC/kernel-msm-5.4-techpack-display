@@ -309,6 +309,8 @@ struct dsi_panel_lhbm_config {
 	bool lhbm_wait_for_bl_valid;
 	u32 lhbm_wait_for_bl_count;
 	u32 lhbm_wait_for_bl_interval;
+	bool lhbm_with_dc;
+	u32  dc_mode_during_hbm;
 };
 
 struct dsi_panel_apl_config {

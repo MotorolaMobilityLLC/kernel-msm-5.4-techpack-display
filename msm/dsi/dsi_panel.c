@@ -1615,6 +1615,13 @@ static int dsi_panel_set_dc(struct dsi_panel *panel,
 		return 0;
 	}
 	memcpy(&panel->curDCModeParaInfo, param_info, sizeof(struct msm_param_info));
+
+	if(dsi_panel_param_is_hbm_on(panel) && panel->lhbm_config.lhbm_with_dc) {
+		pr_info("%s: Hbm is on, skip set DC to %d\n", __func__, param_info->value);
+		panel->lhbm_config.dc_mode_during_hbm = param_info->value;
+		return rc;
+	}
+
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0)
 		DSI_ERR("%s: failed to send param cmds. ret=%d\n", __func__, rc);
@@ -1644,6 +1651,7 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 				struct msm_param_info *param_info)
 {
 	int rc = 0;
+	struct msm_param_info param;
 
 	if (!panel || !param_info) {
                 DSI_ERR("invalid params\n");
@@ -1659,7 +1667,20 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 
 	switch (param_info->param_idx) {
 		case PARAM_HBM_ID :
+			param.param_idx = PARAM_DC_ID;
+			if((panel->lhbm_config.lhbm_with_dc) && (param_info->value == HBM_FOD_ON_STATE)){
+				panel->lhbm_config.dc_mode_during_hbm = panel->curDCModeParaInfo.value;
+				param.value = 1;
+				dsi_panel_set_dc(panel, &param);
+			}
+
 			dsi_panel_set_hbm(panel, param_info);
+
+			if((panel->lhbm_config.lhbm_with_dc) && (param_info->value == HBM_OFF_STATE)){
+				param.value = panel->lhbm_config.dc_mode_during_hbm;
+				dsi_panel_set_dc(panel, &param);
+			}
+
 			break;
 		case PARAM_CABC_ID :
 			dsi_panel_set_cabc(panel, param_info);
@@ -5037,6 +5058,9 @@ static int dsi_panel_parse_local_hbm_config(struct dsi_panel *panel)
 		} else {
 			DSI_INFO("%s:qcom,mdss-dsi-panel-lhbm-wait-bl-valid is not defined\n", __func__);
 		}
+
+		lhbm_config->lhbm_with_dc = utils->read_bool(utils->data,
+			"qcom,mdss-dsi-panel-lhbm-with-dc");
 
 		rc = utils->read_u32(utils->data,
 			"qcom,mdss-dsi-panel-local-hbm-DC-HYBIRD-THRESHOLD-BL",
