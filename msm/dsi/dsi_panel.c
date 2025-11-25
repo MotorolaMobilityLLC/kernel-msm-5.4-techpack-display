@@ -795,7 +795,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	for (i = 0; i < count; i++) {
 		cmds->ctrl_flags = 0;
 	       if (type == DSI_CMD_SET_LP1 || type == DSI_CMD_SET_LP2 || type == DSI_CMD_SET_LP3
-			|| type == DSI_CMD_SET_NOLP ) {
+			|| type == DSI_CMD_SET_NOLP || type == DSI_CMD_SET_TIMING_SWITCH) {
 	           dbgcmds = kzalloc(cmds->msg.tx_len * 4 + 1, GFP_KERNEL);
 	           if (dbgcmds) {
 			pcmddata = (u8*)cmds->msg.tx_buf;
