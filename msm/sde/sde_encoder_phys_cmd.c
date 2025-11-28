@@ -535,227 +535,6 @@ static void sde_encoder_phys_cmd_autorefresh_done_irq(void *arg, int irq_idx)
 	/* Signal any waiting atomic commit thread */
 	wake_up_all(&cmd_enc->autorefresh.kickoff_wq);
 }
-static u64 g_teCount = 0;
-static ktime_t last_time_us = 0;
-static int g_te_irq_cal_period = 0;  /* Default 1000000us */
-static int g_te_irq_auto_enabled = 0;
-static irqreturn_t dsi_display_panel_te_irq_handler_ext(int irq, void *data)
-{
-	ktime_t current_time_us;
-	u64 fps, diff_us;
-
-	current_time_us = ktime_get();
-	diff_us = (u64)ktime_us_delta(current_time_us, last_time_us);
-	g_teCount++;
-
-	if (diff_us >= g_te_irq_cal_period) {
-		 /* Multiplying with 10 to get fps in floating point */
-		fps = ((u64)g_teCount) * 1000000 * 10;
-		do_div(fps, diff_us);
-		DSI_INFO("FPS for last (%llums, %llu frames) is %d.%d\n",
-				diff_us/1000, g_teCount, (unsigned int)fps/10, (unsigned int)fps%10);
-		last_time_us = current_time_us;
-		g_teCount = 0;
-	}
-
-	return IRQ_HANDLED;
-}
-
-static void dsi_display_te_irq_en(struct dsi_display *display, bool en)
-{
-	int rc = 0;
-	struct platform_device *pdev;
-	struct device *dev;
-	unsigned int te_irq;
-
-	pdev = display->pdev;
-	if (!pdev) {
-		pr_err("%s: invalid platform device\n", __func__);
-		return;
-	}
-
-	dev = &pdev->dev;
-	if (!dev) {
-		pr_err("%s: invalid device\n", __func__);
-		return;
-	}
-
-	if (display->trusted_vm_env) {
-		pr_info("%s: GPIO's are not enabled in trusted VM\n", __func__);
-		return;
-	}
-
-	if (!gpio_is_valid(display->disp_te_gpio)) {
-		pr_err("%s: GPIO %d is not valid\n", __func__, display->disp_te_gpio);
-		rc = -EINVAL;
-		return;
-	}
-
-	te_irq = gpio_to_irq(display->disp_te_gpio);
-	pr_info("%s: set TE (gpio%d) irq(%d) to %d\n", __func__, display->disp_te_gpio, te_irq, en);
-       if (te_irq <= 0) {
-		pr_err("%s: map gpio %d to irq %d is not valid\n", __func__, display->disp_te_gpio, te_irq);
-                return;
-	}
-       if (en) {
-            /* Avoid deferred spurious irqs with disable_irq() */
-            irq_set_status_flags(te_irq, IRQ_DISABLE_UNLAZY);
-            rc = devm_request_irq(dev, te_irq, dsi_display_panel_te_irq_handler_ext,
-                             IRQF_TRIGGER_FALLING | IRQF_ONESHOT, "TE_GPIO", display);
-            if (rc) {
-                pr_err("%s: TE request_irq failed for ESD rc:%d\n", __func__, rc);
-                irq_clear_status_flags(te_irq, IRQ_DISABLE_UNLAZY);
-                return;
-            }
-            enable_irq(te_irq);
-	} else {
-            disable_irq(te_irq);
-			devm_free_irq(dev, te_irq, display);
-	}
-
-	return;
-}
-
-/* Global flag to track TE IRQ mode: 0=manual, 1=auto */
-/**
- * sde_encoder_phys_cmd_check_te_interval - Check if TE interval is abnormal
- * @phys_enc: physical encoder
- * @cmd_enc: command mode encoder
- * @current_te_time: current TE timestamp
- *
- * Returns: true if TE interval is abnormal, false if normal
- */
-static bool sde_encoder_phys_cmd_check_te_interval(
-	struct sde_encoder_phys *phys_enc,
-	struct sde_encoder_phys_cmd *cmd_enc,
-	ktime_t current_te_time)
-{
-	ktime_t te_interval;
-	u32 refresh_rate, nominal_te_interval_us;
-	u32 min_threshold_us, max_threshold_us, actual_te_interval_us;
-
-	/* Skip check if no previous TE timestamp */
-	if (!cmd_enc->last_te_time)
-		return false;
-
-	/* Calculate time difference between consecutive TE signals */
-	te_interval = ktime_sub(current_te_time, cmd_enc->last_te_time);
-	refresh_rate = drm_mode_vrefresh(&phys_enc->cached_mode);
-
-	/* Validate refresh rate */
-	if (refresh_rate == 0)
-		return false;
-
-	/* Calculate expected TE interval and tolerance range */
-	nominal_te_interval_us = 1000000 / refresh_rate;
-	min_threshold_us = nominal_te_interval_us * (100 - TE_INTERVAL_THRESHOLD_PERCENT) / 100;
-	max_threshold_us = nominal_te_interval_us * (100 + TE_INTERVAL_THRESHOLD_PERCENT) / 100;
-	actual_te_interval_us = ktime_to_us(te_interval);
-
-	/* Check if actual interval is outside normal range */
-	return (actual_te_interval_us < min_threshold_us ||
-			actual_te_interval_us > max_threshold_us);
-}
-
-/**
- * sde_encoder_phys_cmd_handle_te_anomaly - Handle TE anomaly detection and logging
- * @phys_enc: physical encoder
- * @cmd_enc: command mode encoder
- * @current_te_time: current TE timestamp
- *
- * When TE anomaly count reaches 5, log every 5 anomalies and enable TE IRQ monitoring
- */
-static void sde_encoder_phys_cmd_handle_te_anomaly(
-	struct sde_encoder_phys *phys_enc,
-	struct sde_encoder_phys_cmd *cmd_enc,
-	ktime_t current_te_time)
-{
-	ktime_t te_interval;
-	u32 refresh_rate, nominal_te_interval_us, actual_te_interval_us;
-
-	/* Basic validation */
-	if (!cmd_enc->last_te_time)
-		return;
-
-	te_interval = ktime_sub(current_te_time, cmd_enc->last_te_time);
-	refresh_rate = drm_mode_vrefresh(&phys_enc->cached_mode);
-
-	if (refresh_rate == 0)
-		return;
-
-	nominal_te_interval_us = 1000000 / refresh_rate;
-	actual_te_interval_us = ktime_to_us(te_interval);
-
-	/* Increment anomaly counter */
-	cmd_enc->te_anomaly_count++;
-
-	/* Log every 5 anomalies starting from the 5th */
-	if (cmd_enc->te_anomaly_count >= 5 && (cmd_enc->te_anomaly_count % 5 == 0)) {
-		SDE_ERROR("TE interval abnormal: expected %uus (±%d%%), actual %uus, refresh rate %uhz, anomaly_count=%d\n",
-			nominal_te_interval_us, TE_INTERVAL_THRESHOLD_PERCENT,
-			actual_te_interval_us, refresh_rate, cmd_enc->te_anomaly_count);
-
-		SDE_EVT32(DRMID(phys_enc->parent), nominal_te_interval_us,
-			actual_te_interval_us, refresh_rate, cmd_enc->te_anomaly_count, SDE_EVTLOG_ERROR);
-
-		/* Enable TE IRQ monitoring only on first threshold breach and in manual mode */
-		if (cmd_enc->te_anomaly_log_count == 0 && !g_te_irq_auto_enabled) {
-			if (phys_enc->connector) {
-				struct sde_connector *sde_conn = to_sde_connector(phys_enc->connector);
-				struct dsi_display *display = sde_conn ? sde_conn->display : NULL;
-
-				if (display) {
-					if(display->display_idx == 0){ //only check main display
-						g_te_irq_cal_period = 1000000; /* 1-second statistical window */
-						g_te_irq_auto_enabled = 1; /* Switch to auto mode */
-						dsi_display_te_irq_en(display, true);
-						SDE_INFO("te_rd_ptr_irq anomaly detected, auto-enabling Panel TE IRQ for FPS monitoring\n");
-					}
-				}
-			}
-		}
-
-		cmd_enc->te_anomaly_log_count++;
-	}
-}
-
-/**
- * sde_encoder_phys_cmd_reset_te_anomaly - Reset TE anomaly state
- * @phys_enc: physical encoder
- * @cmd_enc: command mode encoder
- *
- * Reset anomaly counters and disable TE IRQ monitoring when TE intervals normalize
- */
-static void sde_encoder_phys_cmd_reset_te_anomaly(
-	struct sde_encoder_phys *phys_enc,
-	struct sde_encoder_phys_cmd *cmd_enc)
-{
-	/* Only log reset if we had significant anomalies */
-	if (cmd_enc->te_anomaly_count >= 5) {
-		SDE_INFO("TE interval normalized after %d anomalies, resetting counters\n",
-				cmd_enc->te_anomaly_count);
-
-		/* Disable TE IRQ monitoring only if in auto mode */
-		if (g_te_irq_auto_enabled) {
-			if (phys_enc->connector) {
-				struct sde_connector *sde_conn = to_sde_connector(phys_enc->connector);
-				struct dsi_display *display = sde_conn ? sde_conn->display : NULL;
-
-				if (display) {
-					dsi_display_te_irq_en(display, false);
-					g_te_irq_cal_period = 0;
-					g_te_irq_auto_enabled = 0; /* Switch back to manual mode */
-					SDE_INFO("TE interval normalized, auto-disabling TE IRQ monitoring\n");
-				}
-			}
-		}
-
-		cmd_enc->te_anomaly_log_count = 0;
-	}
-
-	/* Always reset anomaly counter */
-	cmd_enc->te_anomaly_count = 0;
-}
 
 static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 {
@@ -770,9 +549,12 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	unsigned long lock_flags;
 	u32 fence_ready = 0;
 	enum msm_disp_op disp_op;
-	ktime_t current_te_time;
 
-	/* Parameter validation */
+	ktime_t current_te_time, te_interval;
+	u32 nominal_te_interval_us, min_threshold_us, max_threshold_us;
+	u32 refresh_rate;
+
+
 	if (!phys_enc || !phys_enc->parent || !phys_enc->hw_pp || !phys_enc->hw_intf)
 		return;
 
@@ -787,14 +569,32 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 
 	current_te_time = ktime_get();
 
-	/* TE anomaly detection and handling */
-	if (sde_encoder_phys_cmd_check_te_interval(phys_enc, cmd_enc, current_te_time)) {
-		sde_encoder_phys_cmd_handle_te_anomaly(phys_enc, cmd_enc, current_te_time);
-	} else {
-		sde_encoder_phys_cmd_reset_te_anomaly(phys_enc, cmd_enc);
-	}
+	if (cmd_enc->last_te_time) {
+		te_interval = ktime_sub(current_te_time, cmd_enc->last_te_time);
 
-	/* Update last TE timestamp */
+		refresh_rate = drm_mode_vrefresh(&phys_enc->cached_mode);
+		if (refresh_rate > 0) {
+			nominal_te_interval_us = 1000000 / refresh_rate;
+
+			min_threshold_us = nominal_te_interval_us * (100 - TE_INTERVAL_THRESHOLD_PERCENT) / 100;
+			max_threshold_us = nominal_te_interval_us * (100 + TE_INTERVAL_THRESHOLD_PERCENT) / 100;
+
+			u32 actual_te_interval_us = ktime_to_us(te_interval);
+
+			if (actual_te_interval_us < min_threshold_us || actual_te_interval_us > max_threshold_us) {
+				cmd_enc->te_anomaly_count++;
+				if (cmd_enc->te_anomaly_count >= 5) {
+					SDE_ERROR("TE interval abnormal: expected %uus (±%d%%), actual %uus, refresh rate %uhz\n",
+						nominal_te_interval_us, TE_INTERVAL_THRESHOLD_PERCENT,
+						actual_te_interval_us, refresh_rate);
+
+					SDE_EVT32(DRMID(phys_enc->parent), nominal_te_interval_us,
+						actual_te_interval_us, refresh_rate, SDE_EVTLOG_ERROR);
+				}
+			}else
+				cmd_enc->te_anomaly_count = 0;
+		}
+	}
 	cmd_enc->last_te_time = current_te_time;
 
 	if (ctl->ops.get_scheduler_status[disp_op])
@@ -832,7 +632,6 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	wake_up_all(&cmd_enc->pending_vblank_wq);
 	SDE_ATRACE_END("rd_ptr_irq");
 }
-
 
 static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 {
