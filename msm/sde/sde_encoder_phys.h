@@ -624,7 +624,6 @@ struct sde_encoder_phys_cmd {
 	u32 qsync_threshold_lines;
 	ktime_t last_te_time;
 	int te_anomaly_count;
-	int te_anomaly_log_count;
 };
 
 /**
