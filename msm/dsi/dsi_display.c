@@ -310,14 +310,11 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 
 	DSI_DEBUG("bl_scale = %u, bl_scale_sv = %u, bl_lvl = %u\n",
 		bl_scale, bl_scale_sv, (u32)bl_temp);
-	if (((panel->power_mode == SDE_MODE_DPMS_LP1 || panel->power_mode == SDE_MODE_DPMS_LP2)) && (!panel->panel_trueaod_state)) {
-		DSI_INFO("%s: power_mode %d, panel_trueaod_state %d, skip set backlight to %d\n",
-			 __func__, panel->power_mode, panel->panel_trueaod_state, (u32)bl_temp);
-	} else {
-		rc = dsi_panel_set_backlight(panel, (u32)bl_temp);
-		if (rc)
-			DSI_ERR("unable to set backlight\n");
-	}
+
+	rc = dsi_panel_set_backlight(panel, (u32)bl_temp);
+	if (rc)
+		DSI_ERR("unable to set backlight\n");
+
 error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
