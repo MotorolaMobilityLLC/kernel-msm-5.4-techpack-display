@@ -1122,6 +1122,14 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (dsi_panel_set_hbm_backlight(panel, &bl_lvl))
 		return 0;
 
+	panel->bl_config.current_bl_level = bl_lvl;
+
+	if (((panel->power_mode == SDE_MODE_DPMS_LP1 || panel->power_mode == SDE_MODE_DPMS_LP2)) && (!panel->panel_trueaod_state)) {
+		DSI_INFO("%s: power_mode %d, panel_trueaod_state %d, skip set backlight to %d\n",
+			 __func__, panel->power_mode, panel->panel_trueaod_state, (u32)bl_lvl);
+		return 0;
+	}
+
 	DSI_DEBUG("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 	switch (bl->type) {
 	case DSI_BACKLIGHT_WLED:
@@ -1151,8 +1159,6 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		DSI_ERR("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
 	}
-
-	panel->bl_config.current_bl_level = bl_lvl;
 
 	if(panel->aod_config.bl_vid_update && panel->panel_trueaod_state){
 		dsi_panel_aod_backlight_update(panel, DSI_CMD_SET_CMD_BACKLIGHT);
