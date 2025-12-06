@@ -5838,6 +5838,80 @@ static void dsi_panel_switch_delay_deinit(struct drm_panel_switch_delay_config *
 	if (switch_delay_config->switch_delay_list)
 		kfree(switch_delay_config->switch_delay_list);
 }
+/*
+ * Parse rate switch configuration from device tree
+ * Returns: 0 on success, error code on failure
+ */
+static int dsi_panel_parse_rate_switch_config(struct dsi_panel *panel)
+{
+    struct dsi_panel_rate_switch_tracking *track = &panel->rate_switch_track;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+    int rc = 0;
+
+    /* Read configuration from device tree properties */
+    track->enabled = utils->read_bool(utils->data,
+        "qcom,mdss-dsi-rate-switch-interval-enabled");
+
+    rc = utils->read_u32(utils->data,
+        "qcom,mdss-dsi-rate-switch-interval-multiplier",
+        &track->interval_multiplier);
+    if (rc) {
+        track->interval_multiplier = 2; /* Default value */
+        rc = 0;
+    }
+
+    rc = utils->read_u32(utils->data,
+        "qcom,mdss-dsi-rate-switch-min-forced-delay",
+        &track->min_forced_delay_ms);
+    if (rc) {
+        track->min_forced_delay_ms = 0; /* Default value */
+        rc = 0;
+    }
+    track->last_refresh_rate = 0;
+    track->last_switch_time = 0;
+    track->first_switch = true;
+
+    DSI_INFO("[%s] Rate switch tracking: enabled=%s, multiplier=%u, forced_delay=%u ms\n",
+             panel->name,
+             track->enabled ? "true" : "false",
+             track->interval_multiplier,
+             track->min_forced_delay_ms);
+
+    return rc;
+}
+
+/*
+ * Deinitialize refresh rate switch tracking
+ * Called during panel destruction or reset
+ */
+static void dsi_panel_rate_switch_tracking_deinit(struct dsi_panel_rate_switch_tracking *track)
+{
+    if (!track)
+        return;
+
+    /* Log final state for debugging */
+    DSI_DEBUG("Rate switch tracking deinit:\n"
+              "  Last refresh rate: %u Hz\n"
+              "  First switch flag: %s\n"
+              "  Enabled: %s\n"
+              "  Interval multiplier: %u\n"
+              "  Min forced delay: %u ms\n",
+              track->last_refresh_rate,
+              track->first_switch ? "true" : "false",
+              track->enabled ? "true" : "false",
+              track->interval_multiplier,
+              track->min_forced_delay_ms);
+
+    /* Reset runtime tracking data */
+    track->last_refresh_rate = 0;
+    track->last_switch_time = 0;
+    track->first_switch = true;
+
+    /* Note: Configuration parameters (enabled, interval_multiplier,
+     * min_forced_delay_ms) are preserved for potential re-initialization
+     */
+}
 
 static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
 {
@@ -6586,6 +6660,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (rc)
 		DSI_DEBUG("failed to parse local switch delay config, rc=%d\n", rc);
 
+	rc = dsi_panel_parse_rate_switch_config(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse local rate switch  config, rc=%d\n", rc);
+
 	rc = dsi_panel_parse_pcd_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse pcd reg config, rc=%d\n", rc);
@@ -6647,6 +6725,7 @@ void dsi_panel_put(struct dsi_panel *panel)
 	dsi_panel_switch_delay_deinit(&panel->switch_delay_config);
 	dsi_panel_lhbm_config_deinit(&panel->lhbm_config);
 	dsi_panel_pcd_config_deinit(&panel->pcd_config);
+	dsi_panel_rate_switch_tracking_deinit(&panel->rate_switch_track);
 
 	kfree(panel->avr_caps.avr_step_fps_list);
 	kfree(panel);
@@ -8128,11 +8207,130 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 
 	}
 }
+/*
+ * Check if refresh rate switch interval is too short
+ * Returns: Required delay in milliseconds, 0 means no delay needed
+ */
+static u32 dsi_panel_check_rate_switch_interval(struct dsi_panel *panel,
+                                               u32 current_refresh_rate)
+{
+    struct dsi_panel_rate_switch_tracking *track;
+    ktime_t current_time;
+    u64 time_diff_ms;
+    u32 min_interval_ms;
+    u32 delay_ms = 0;
+
+    if (!panel)
+        return 0;
+
+    track = &panel->rate_switch_track;
+
+    /* Return immediately if checking is disabled */
+    if (!track->enabled) {
+        DSI_DEBUG("[%s] Rate switch interval check disabled\n", panel->name);
+        return 0;
+    }
+
+    /* Skip check for first switch */
+    if (track->first_switch) {
+        DSI_DEBUG("[%s] First rate switch, skipping interval check\n", panel->name);
+        return 0;
+    }
+
+    if (track->last_refresh_rate == 0) {
+        DSI_DEBUG("[%s] Last refresh rate is 0, skipping interval check\n", panel->name);
+        return 0;
+    }
+
+    /* Get current time */
+    current_time = ktime_get();
+
+    /* Calculate time difference in milliseconds */
+    time_diff_ms = ktime_to_ms(ktime_sub(current_time, track->last_switch_time));
+
+    /* Calculate minimum allowed time interval in milliseconds
+     * Formula: (last_refresh_rate / 1000) * interval_multiplier
+     */
+    min_interval_ms = (1000 * track->interval_multiplier) / track->last_refresh_rate + 2;
+
+    /* Use larger value if forced minimum delay is configured */
+    if (track->min_forced_delay_ms > min_interval_ms) {
+        min_interval_ms = track->min_forced_delay_ms;
+        DSI_DEBUG("[%s] Using forced minimum delay: %u ms\n", panel->name, min_interval_ms);
+    }
+
+    /* Ensure minimum interval is not zero */
+    if (min_interval_ms == 0) {
+        min_interval_ms = 1;
+        DSI_DEBUG("[%s] Adjusted minimum interval to 1 ms\n", panel->name);
+    }
+
+    /* Calculate delay if time interval is too short */
+    if (time_diff_ms < min_interval_ms) {
+        delay_ms = 1000/current_refresh_rate + 2;
+
+        DSI_INFO("[%s] Rate switch too frequent, delaying %u ms\n"
+                 "  Last refresh rate: %u Hz, Current: %u Hz\n"
+                 "  Time since last switch: %llu ms, Minimum interval: %u ms\n",
+                 panel->name, delay_ms,
+                 track->last_refresh_rate, current_refresh_rate,
+                 time_diff_ms, min_interval_ms);
+    } else {
+        DSI_DEBUG("[%s] Rate switch interval OK: %llu ms (>= %u ms)\n",
+                 panel->name, time_diff_ms, min_interval_ms);
+    }
+
+    return delay_ms;
+}
+
+/*
+ * Execute refresh rate switch delay
+ * Uses appropriate delay function based on delay length
+ */
+static void dsi_panel_execute_rate_switch_delay(struct dsi_panel *panel,
+                                               u32 delay_ms)
+{
+    if (!panel || delay_ms == 0)
+        return;
+    DSI_DEBUG("[%s] Executing rate switch delay: %u ms\n", panel->name, delay_ms);
+    /* Select appropriate delay function based on delay length */
+    if (delay_ms >= 20) {
+        /* Use millisecond-level delay for longer delays */
+        msleep(delay_ms);
+    } else if (delay_ms >= 5) {
+        /* Use microsecond-level delay for medium delays */
+        usleep_range(delay_ms * 1000, (delay_ms * 1000) + 1000);
+    } else {
+        /* Use precise microsecond-level delay for short delays */
+        usleep_range(delay_ms * 1000, (delay_ms * 1000) + 100);
+    }
+    DSI_DEBUG("[%s] Delay of %u ms completed\n", panel->name, delay_ms);
+}
+
+/*
+ * Update refresh rate switch tracking information
+ * Called after successful refresh rate switch
+ */
+static void dsi_panel_update_rate_switch_tracking(struct dsi_panel *panel,
+                                                 u32 current_refresh_rate)
+{
+    struct dsi_panel_rate_switch_tracking *track;
+    if (!panel)
+        return;
+    track = &panel->rate_switch_track;
+    track->last_refresh_rate = current_refresh_rate;
+    track->last_switch_time = ktime_get();
+    track->first_switch = false;
+    DSI_DEBUG("[%s] Rate switch tracking updated: new rate = %u Hz\n",
+             panel->name, current_refresh_rate);
+}
 
 int dsi_panel_switch(struct dsi_panel *panel)
 {
 	int rc = 0;
 	struct dsi_mode_info timing;
+    u32 current_refresh_rate;
+    u32 delay_ms = 0;
 
 	if (!panel) {
 		DSI_ERR("Invalid params\n");
@@ -8144,10 +8342,33 @@ int dsi_panel_switch(struct dsi_panel *panel)
 	if(panel->prr_config.enable && dsi_display_mode_actual_rr(&timing) == PARTITION_REFRESHRATE)
 	    dsi_panel_partition_refreshrate_timming_switch_update(panel, DSI_CMD_SET_TIMING_SWITCH,timing.refresh_rate);
 
+    current_refresh_rate = timing.refresh_rate;
+
+    /* Step 1: Check refresh rate switch interval */
+    delay_ms = dsi_panel_check_rate_switch_interval(panel, current_refresh_rate);
+
+    /* Step 2: Execute delay if needed */
+    if (delay_ms > 0) {
+        DSI_INFO("[%s] Applying rate switch delay: %u ms\n",
+                 panel->name, delay_ms);
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH, false);
+		if (rc)
+			DSI_ERR("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds, rc=%d\n",
+				   panel->name, rc);
+        dsi_panel_execute_rate_switch_delay(panel, delay_ms);
+    }
+
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH, false);
-	if (rc)
+	if (rc){
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds, rc=%d\n",
-		       panel->name, rc);
+			   panel->name, rc);
+	}
+	else {
+		if(panel->rate_switch_track.enabled)
+			/* Update tracking information after successful switch */
+			dsi_panel_update_rate_switch_tracking(panel, current_refresh_rate);
+	}
+
 	if(panel->switch_delay_config.switch_delay_enabled &&
 		panel->switch_delay_config.switch_delay_ms > 0) {
 		DSI_INFO("[%s] dsi_panel_switch %d\n",
