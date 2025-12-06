@@ -350,6 +350,20 @@ struct dsi_panel_apl_config {
 	int dobly_enable;
 };
 
+/*
+ * Refresh rate switch interval tracking structure
+ * Purpose: Prevent display flickering and hardware damage by enforcing
+ *          minimum time intervals between refresh rate switches
+ */
+struct dsi_panel_rate_switch_tracking {
+    u32 last_refresh_rate;          /* Last successfully switched refresh rate */
+    ktime_t last_switch_time;       /* Timestamp of last successful switch */
+    bool first_switch;              /* Flag for first switch (skip initial check) */
+    bool enabled;                   /* Whether interval checking is enabled */
+    u32 interval_multiplier;        /* Multiplier for interval calculation (default: 2) */
+    u32 min_forced_delay_ms;        /* Minimum forced delay in milliseconds */
+};
+
 struct dsi_panel_odc_config {
 	bool enable;
 	u32 odc_threshold;
@@ -578,6 +592,7 @@ struct dsi_panel {
 	struct drm_panel_pcd_config pcd_config;
 
 	struct sde_partition_refreshrate cur_partition_refreshrate;
+	struct dsi_panel_rate_switch_tracking rate_switch_track;
 };
 
 bool dsi_display_all_displays_dead(void);
