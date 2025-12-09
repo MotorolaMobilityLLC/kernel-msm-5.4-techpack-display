@@ -686,7 +686,7 @@ int dsi_panel_tx_cellid_cmd(struct dsi_panel *panel);
 int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type);
 int dsi_panel_tx_pcd_reg_cmd(struct dsi_panel *panel);
-void set_panelpcdcheck_enable(struct dsi_panel *panel, bool en);
+int set_panelpcdcheck_enable(struct dsi_panel *panel, bool en);
 int dsi_panel_read_pcd_reg(struct dsi_panel *panel, bool force_get);
 void dsi_panel_check_pcd_read_flag(struct dsi_panel *panel);
 
