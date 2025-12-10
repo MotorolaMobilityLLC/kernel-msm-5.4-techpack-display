@@ -8483,6 +8483,7 @@ static u32 dsi_panel_check_rate_switch_interval(struct dsi_panel *panel,
     u64 time_diff_ms;
     u32 min_interval_ms;
     u32 delay_ms = 0;
+    bool apply_check = false;
 
     if (!panel)
         return 0;
@@ -8498,6 +8499,38 @@ static u32 dsi_panel_check_rate_switch_interval(struct dsi_panel *panel,
     /* Skip check for first switch */
     if (track->first_switch) {
         DSI_DEBUG("[%s] First rate switch, skipping interval check\n", panel->name);
+        return 0;
+    }
+
+    /* Define refresh rate transition matrix */
+    /* Only apply check for specific transitions */
+	//Need check 24/60 -> 90/120
+    switch (track->last_refresh_rate) {
+        case 24: /* 24Hz */
+            if (current_refresh_rate == 90 || current_refresh_rate == 120) {
+                apply_check = true;
+            }
+            break;
+        case 30: /* 30Hz */
+            if (current_refresh_rate == 90 || current_refresh_rate == 120) {
+                apply_check = true;
+            }
+            break;
+        case 60: /* 60Hz */
+            if (current_refresh_rate == 90 || current_refresh_rate == 120) {
+                apply_check = true;
+            }
+            break;
+        /* Add other combinations as needed */
+        default:
+            /* For other refresh rates, skip interval check */
+            DSI_DEBUG("[%s] Skipping check for %u Hz -> %u Hz transition\n",
+                     panel->name, track->last_refresh_rate, current_refresh_rate);
+            break;
+    }
+
+    /* If not in the target transition matrix, skip check */
+    if (!apply_check) {
         return 0;
     }
 
@@ -8531,14 +8564,24 @@ static u32 dsi_panel_check_rate_switch_interval(struct dsi_panel *panel,
 
     /* Calculate delay if time interval is too short */
     if (time_diff_ms < min_interval_ms) {
-        delay_ms = 1000/current_refresh_rate + 2;
+        /* Calculate delay: at least one full frame time + margin */
+        u32 frame_time_ms = 1000 / current_refresh_rate;
+        delay_ms = frame_time_ms + 2; /* One frame + 2ms margin */
 
-        DSI_INFO("[%s] Rate switch too frequent, delaying %u ms\n"
-                 "  Last refresh rate: %u Hz, Current: %u Hz\n"
-                 "  Time since last switch: %llu ms, Minimum interval: %u ms\n",
+        /* Ensure minimum delay for stability */
+        if (delay_ms < 8) {
+            delay_ms = 8; /* Minimum 8ms delay for stability,120hz 8.3ms */
+        }
+
+        DSI_INFO("[%s] Low->High refresh rate switch needs delay: %u ms\n"
+                 "  Transition: %u Hz -> %u Hz\n"
+                 "  Time since last switch: %llu ms\n"
+                 "  Required interval: %u ms\n"
+                 "  Frame time: %u ms\n",
                  panel->name, delay_ms,
                  track->last_refresh_rate, current_refresh_rate,
-                 time_diff_ms, min_interval_ms);
+                 time_diff_ms, min_interval_ms,
+                 1000 / current_refresh_rate);
     } else {
         DSI_DEBUG("[%s] Rate switch interval OK: %llu ms (>= %u ms)\n",
                  panel->name, time_diff_ms, min_interval_ms);
@@ -8546,6 +8589,7 @@ static u32 dsi_panel_check_rate_switch_interval(struct dsi_panel *panel,
 
     return delay_ms;
 }
+
 
 /*
  * Execute refresh rate switch delay
