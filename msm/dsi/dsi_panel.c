@@ -1083,6 +1083,9 @@ static int dsi_panel_set_od(struct dsi_panel *panel, u32 bl_lvl)
 
 	panel->od_config.od_bl_set = 0;
 
+	if(panel->panel_trueaod_state && panel->od_config.od_bypass_in_cmd)
+		return 0;
+
 	if (bl_lvl <= panel->od_config.od_threshold && !panel->od_config.od_state) {
 		od_cmd = &panel->od_config.od_cmd_on;
 		dsi_panel_od_backlight_update(panel, od_cmd);
@@ -5386,6 +5389,25 @@ static int dsi_panel_parse_od_config(struct dsi_panel *panel)
 		DSI_ERR("%s:qcom,mdss-dsi-bl-od-threshold is not defined, set it to 0\n", __func__);
 		od_config->od_threshold = 0;
 		goto error;
+	}
+
+	od_config->od_bypass_in_cmd = utils->read_bool(utils->data,
+		"qcom,panel-od-bypass-in-cmd");
+	if (od_config->od_bypass_in_cmd) {
+		rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-od-reg",
+			&(od_config->od_reg));
+		if (rc)
+			DSI_WARN("%s:qcom,mdss-dsi-panel-od-reg is not defined\n", __func__);
+
+		rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-od-on-val",
+			&(od_config->od_on_val));
+		if (rc)
+			DSI_WARN("%s:qcom,mdss-dsi-panel-od-on-val is not defined\n", __func__);
+
+		rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-od-off-val",
+			&(od_config->od_off_val));
+		if (rc)
+			DSI_WARN("%s:qcom,mdss-dsi-panel-od-off-val is not defined\n", __func__);
 	}
 
 	dsi_panel_parse_cmd_sets_sub(panel, &od_config->od_cmd_on,

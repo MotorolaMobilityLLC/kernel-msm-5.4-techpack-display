@@ -332,6 +332,10 @@ struct dsi_panel_od_config {
 	struct dsi_panel_cmd_set od_cmd_off;
 	bool od_bl_set;
 	bool od_state;
+	bool od_bypass_in_cmd;
+	u32 od_reg;
+	u32 od_on_val;
+	u32 od_off_val;
 };
 
 struct dsi_panel_aod_config {

@@ -1827,6 +1827,17 @@ void dsi_panel_aod_backlight_update(struct dsi_panel *panel, enum dsi_cmd_set_ty
 						panel->name, payload[0], payload[1],payload[2] );
 				}
 			}
+
+			if(panel->od_config.od_bypass_in_cmd &&
+				payload[0] == panel->od_config.od_reg) {
+				if(bl_level <= panel->od_config.od_threshold) {
+					payload[1] = panel->od_config.od_on_val;
+					panel->od_config.od_state = true;
+				} else {
+					payload[1] = panel->od_config.od_off_val;
+					panel->od_config.od_state = false;
+				}
+			}
 		}
 
 		cmds++;
