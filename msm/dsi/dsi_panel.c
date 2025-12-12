@@ -8417,24 +8417,52 @@ static void dsi_panel_partition_refreshrate_timming_switch_update(struct dsi_pan
 		if(payload[0] == 0x6b &&  (panel->prr_config.boundaryLine_reg_count -1) == i &&
 			cmds->msg.tx_len == 5)
 		{
-			if(panel->cur_partition_refreshrate.boundaryLine1st >= panel->prr_config.min_boundaryLine &&
-				panel->cur_partition_refreshrate.boundaryLine1st <= panel->prr_config.max_boundaryLine){
-				payload[1] = (panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h) >> 0x08;
-				payload[2] = (panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h) & 0xFF;
-			}else{
-				payload[1] = 0x00;
-				payload[2] = 0x10;
-			}
+			if(dsi_panel_partition_refreshrate_dfps_is_available(panel)) {
+				if(panel->cur_partition_refreshrate.boundaryLine1st >= panel->prr_config.min_boundaryLine &&
+					panel->cur_partition_refreshrate.boundaryLine1st <= panel->prr_config.max_boundaryLine){
+					u32 split_line = panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h;
+					if(split_line)	// For nt37900 panel, the split line must be N-1 of the slice boundary.
+						split_line -= 1;
+					payload[1] = split_line >> 0x08;
+					payload[2] = split_line & 0xFF;
+				}else{
+					payload[1] = 0x00;
+					payload[2] = 0x10;
+				}
 
-			if(panel->cur_partition_refreshrate.boundaryLine2nd >= panel->prr_config.min_boundaryLine &&
-				panel->cur_partition_refreshrate.boundaryLine2nd <= panel->prr_config.max_boundaryLine){
-				payload[3] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1)* panel->prr_config.slice_h) >> 0x08;
-				payload[4] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1) * panel->prr_config.slice_h) & 0xFF;
-			}else{
-				payload[3] = 0x0B;
-				payload[4] = 0xB0;
-			}
+				if(panel->cur_partition_refreshrate.boundaryLine2nd >= panel->prr_config.min_boundaryLine &&
+					panel->cur_partition_refreshrate.boundaryLine2nd <= panel->prr_config.max_boundaryLine){
+					u32 split_line = panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h * panel->prr_config.slice_h;
+					if(split_line)	// For nt37900 panel, the split line must be N-1 of the slice boundary.
+						split_line -= 1;
+					payload[3] = split_line >> 0x08;
+					payload[4] = split_line & 0xFF;
+				}else{
+					payload[3] = 0x0B;
+					payload[4] = 0xB0;
+				}
 
+				DSI_INFO("%s, boundary line [%x,%x,%x,%x] \n", __func__, payload[1], payload[2], payload[3], payload[4]);
+			} else {
+				if(panel->cur_partition_refreshrate.boundaryLine1st >= panel->prr_config.min_boundaryLine &&
+					panel->cur_partition_refreshrate.boundaryLine1st <= panel->prr_config.max_boundaryLine){
+					payload[1] = (panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h) >> 0x08;
+					payload[2] = (panel->cur_partition_refreshrate.boundaryLine1st/panel->prr_config.slice_h * panel->prr_config.slice_h) & 0xFF;
+				}else{
+					payload[1] = 0x00;
+					payload[2] = 0x10;
+				}
+
+				if(panel->cur_partition_refreshrate.boundaryLine2nd >= panel->prr_config.min_boundaryLine &&
+					panel->cur_partition_refreshrate.boundaryLine2nd <= panel->prr_config.max_boundaryLine){
+					payload[3] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1)* panel->prr_config.slice_h) >> 0x08;
+					payload[4] = ((panel->cur_partition_refreshrate.boundaryLine2nd/panel->prr_config.slice_h + 1) * panel->prr_config.slice_h) & 0xFF;
+				}else{
+					payload[3] = 0x0B;
+					payload[4] = 0xB0;
+				}
+
+			}
 		}
 		if(dsi_panel_partition_refreshrate_dfps_is_available(panel) || refresh_rate == 120){
 		    //update refreshrate1st
