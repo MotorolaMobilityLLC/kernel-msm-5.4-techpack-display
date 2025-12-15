@@ -1730,4 +1730,59 @@ int dsi_display_read_8s(struct dsi_display *display)
 
 	return 0;
 }
+/* Convert backlight value for legacy panel (new panel DBV1 -> old panel DBV2)
+ * Conversion formulas:
+ * 420 <= DBV1 <= 14056: DBV2 = DBV1 (direct mapping)
+ * 14056 < DBV1 <= 15916: DBV2 = (DBV1 - 14056) * 1.25 + 14056
+ * 15916 < DBV1 <= 16380: DBV2 = 16380 (old panel max brightness)
+ */
+u32 dsi_panel_convert_backlight_for_starship_legacy(struct dsi_panel *panel, u32 bl_lvl)
+{
+	u32 dbv1 = bl_lvl;  // New panel backlight value
+	u32 dbv2;           // Old panel backlight value
+	u32 original_bl_lvl = bl_lvl;
+
+	if (!panel) {
+		DSI_ERR("invalid panel\n");
+		return bl_lvl;
+	}
+
+	// Convert based on DBV1 range
+	if (dbv1 >= 420 && dbv1 <= 14056) {
+		// Direct mapping: DBV2 = DBV1
+		dbv2 = dbv1;
+	} else if (dbv1 > 14056 && dbv1 <= 15916) {
+		// DBV2 = (DBV1 - 14056) * 1.25 + 14056
+		// Using integer arithmetic: (5 * (dbv1 - 14056)) / 4 + 14056
+		dbv2 = (5 * (dbv1 - 14056)) / 4 + 14056;
+	} else if (dbv1 > 15916 && dbv1 <= 16380) {
+		// Old panel cannot reach this brightness, use max value
+		dbv2 = 16380;
+		DSI_INFO("[%s] DBV1=%d exceeds old panel limit, set to max DBV2=16380\n",
+				panel->name, dbv1);
+	} else if (dbv1 < 420) {
+		// Below minimum threshold, keep original
+		dbv2 = dbv1;
+		DSI_DEBUG("[%s] DBV1=%d below min threshold, keep original\n",
+				panel->name, dbv1);
+	} else {
+		// Above maximum range, clamp to max
+		dbv2 = 16380;
+		DSI_WARN("[%s] DBV1=%d exceeds max range, set to max DBV2=16380\n",
+				panel->name, dbv1);
+	}
+
+	// Ensure DBV2 is within valid range
+	if (dbv2 > 16380)
+		dbv2 = 16380;
+
+	// Log conversion if value changed
+	if (dbv2 != original_bl_lvl) {
+		DSI_DEBUG("[%s] Legacy panel backlight conversion: DBV1=%d -> DBV2=%d\n",
+				panel->name, original_bl_lvl, dbv2);
+	}
+
+	return dbv2;
+}
+
 

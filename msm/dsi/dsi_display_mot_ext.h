@@ -47,7 +47,7 @@ int dsi_display_ext_init(struct dsi_display *display);
 bool dsi_panel_mot_parse_timing_from_file(struct dsi_display *display, int index);
 int dsi_display_read_8s(struct dsi_display *display);
 int mot_atoi(const char *src);
-
+u32 dsi_panel_convert_backlight_for_starship_legacy(struct dsi_panel *panel, u32 bl_lvl);
 // BEGIN Motorola zhanggb, add refreshrate group, IKSWT-18219
 /**
  * enum dsi_te_mode - dsi te source

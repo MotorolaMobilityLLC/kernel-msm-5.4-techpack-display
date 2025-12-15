@@ -1118,6 +1118,11 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (dsi_panel_set_hbm_backlight(panel, &bl_lvl))
 		return 0;
 
+	/* Backlight conversion for saturn cli csot legacy panel */
+	if (panel->is_legacy_panel) {
+		bl_lvl = dsi_panel_convert_backlight_for_starship_legacy(panel, bl_lvl);
+	}
+
 	DSI_DEBUG("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 	switch (bl->type) {
 	case DSI_BACKLIGHT_WLED:
@@ -5689,7 +5694,9 @@ static int dsi_panel_parse_mot_panel_config(struct dsi_panel *panel,
 
 	panel->tp_state_check_enable = of_property_read_bool(of_node,
 				"qcom,tp_state_check_enable");
-
+    //starship c9 & c20 csot panel backlight lvl need map
+	panel->is_legacy_panel = of_property_read_bool(of_node,
+				"qcom,is_legacy_panel");
 
        rc = of_property_read_u32(of_node,
                        "qcom,mdss-dsi-panel-param-verision",

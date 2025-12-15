@@ -525,6 +525,7 @@ struct dsi_panel {
 	bool check_in_pcd;
 	int panelPcdCheck_in_enable;
 	struct drm_panel_pcd_config pcd_config;
+	bool is_legacy_panel;
 	struct sde_partition_refreshrate cur_partition_refreshrate;
 };
 
