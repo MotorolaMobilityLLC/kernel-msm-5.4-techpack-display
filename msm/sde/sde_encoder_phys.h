@@ -621,8 +621,6 @@ struct sde_encoder_phys_cmd {
 	struct sde_encoder_phys_cmd_te_timestamp
 			te_timestamp[MAX_TE_PROFILE_COUNT];
 	u32 qsync_threshold_lines;
-	ktime_t last_te_time;
-	int te_anomaly_count;
 };
 
 /**
