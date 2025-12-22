@@ -41,6 +41,8 @@
 
 #define CX0_PERIOD_NS	52
 
+#define TE_INTERVAL_THRESHOLD_PERCENT 10
+
 static inline int _sde_encoder_phys_cmd_get_idle_timeout(
 		struct sde_encoder_phys *phys_enc)
 {
@@ -548,6 +550,11 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	u32 fence_ready = 0;
 	enum msm_disp_op disp_op;
 
+	ktime_t current_te_time, te_interval;
+	u32 nominal_te_interval_us, min_threshold_us, max_threshold_us;
+	u32 refresh_rate;
+
+
 	if (!phys_enc || !phys_enc->parent || !phys_enc->hw_pp || !phys_enc->hw_intf)
 		return;
 
@@ -559,6 +566,36 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	SDE_ATRACE_BEGIN("rd_ptr_irq");
 	cmd_enc = to_sde_encoder_phys_cmd(phys_enc);
 	cesta_client = sde_encoder_get_cesta_client(phys_enc->parent);
+
+	current_te_time = ktime_get();
+
+	if (cmd_enc->last_te_time) {
+		te_interval = ktime_sub(current_te_time, cmd_enc->last_te_time);
+
+		refresh_rate = drm_mode_vrefresh(&phys_enc->cached_mode);
+		if (refresh_rate > 0) {
+			nominal_te_interval_us = 1000000 / refresh_rate;
+
+			min_threshold_us = nominal_te_interval_us * (100 - TE_INTERVAL_THRESHOLD_PERCENT) / 100;
+			max_threshold_us = nominal_te_interval_us * (100 + TE_INTERVAL_THRESHOLD_PERCENT) / 100;
+
+			u32 actual_te_interval_us = ktime_to_us(te_interval);
+
+			if (actual_te_interval_us < min_threshold_us || actual_te_interval_us > max_threshold_us) {
+				cmd_enc->te_anomaly_count++;
+				if (cmd_enc->te_anomaly_count >= 5) {
+					SDE_ERROR("TE interval abnormal: expected %uus (±%d%%), actual %uus, refresh rate %uhz\n",
+						nominal_te_interval_us, TE_INTERVAL_THRESHOLD_PERCENT,
+						actual_te_interval_us, refresh_rate);
+
+					SDE_EVT32(DRMID(phys_enc->parent), nominal_te_interval_us,
+						actual_te_interval_us, refresh_rate, SDE_EVTLOG_ERROR);
+				}
+			}else
+				cmd_enc->te_anomaly_count = 0;
+		}
+	}
+	cmd_enc->last_te_time = current_te_time;
 
 	if (ctl->ops.get_scheduler_status[disp_op])
 		scheduler_status = ctl->ops.get_scheduler_status[disp_op](ctl);
