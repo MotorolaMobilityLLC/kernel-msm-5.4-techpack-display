@@ -5234,6 +5234,7 @@ static int dsi_panel_parse_pcd_config(struct dsi_panel *panel)
 
 	pcd_config->pcd_value_2bytes = utils->read_bool(utils->data, "qcom,mdss-dsi-panel-pcd-value-2bytes");
 
+	pcd_config->pcd_value_zero_valid = utils->read_bool(utils->data, "qcom,mdss-dsi-panel-pcd-value-zero_valid");
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-pcd-reg-pass-min",
 		&(pcd_config->pcd_reg_pass_min));
 	if (rc)
@@ -7874,8 +7875,10 @@ void dsi_panel_parse_pcd_status(struct dsi_panel *panel) {
 				&& (panel->pcd_config.pcd_reg_val <= panel->pcd_config.pcd_reg_pass_max)) {
 			//valid reg
 			panel->pcd_config.pcd_reg_status = 1;
-		}
-		else {
+		} else if (panel->pcd_config.pcd_value_zero_valid && !panel->pcd_config.pcd_reg_val) {
+			//pcd value 0 vailid
+			panel->pcd_config.pcd_reg_status = 1;
+		} else {
 			//NG
 			pr_warn("%s: warn: abnormal pcd reg val:0x%02x, max:0x%02x, min:0x%02x\n", __func__,
 						panel->pcd_config.pcd_reg_val, panel->pcd_config.pcd_reg_pass_max, panel->pcd_config.pcd_reg_pass_min);
