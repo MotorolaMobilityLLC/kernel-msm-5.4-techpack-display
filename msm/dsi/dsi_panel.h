@@ -280,6 +280,7 @@ struct drm_panel_pcd_config {
 	bool pcd_reg_checkable;
 	bool pcd_reg_read_flag;
 	bool check_before_read;
+	bool pcd_value_zero_valid;
 	struct dsi_panel_cmd_set pcd_reg_cmd;
 	u32 pcd_reg_rlen;
 	u32 pcd_reg_offset;
