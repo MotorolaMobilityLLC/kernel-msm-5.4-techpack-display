@@ -3817,7 +3817,7 @@ static void sde_encoder_virt_disable(struct drm_encoder *drm_enc)
 	 * wait for any pending vsync timestamp event to sf
 	 * to ensure vblank irq is disabled.
 	 */
-	if (drm_crtc && sde_enc->vblank_enabled) {
+	if (drm_crtc && sde_enc->vblank_enabled && !msm_is_mode_seamless_poms(&c_state->msm_mode)) {
 		drm_crtc_vblank_off(drm_crtc);
 		kthread_flush_worker(&priv->event_thread[drm_crtc->index].worker);
 	}
