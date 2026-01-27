@@ -375,6 +375,9 @@ struct dsi_panel_odc_config {
 struct dsi_panel_aod_config {
 	bool enable;
 	u32 aod_backlight_threshold;
+
+	bool report_aod_enable;
+	u32 aod_state;
 };
 
 enum panel_idx {
