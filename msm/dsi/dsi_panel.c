@@ -6297,9 +6297,12 @@ static int dsi_panel_parse_aod_config(struct dsi_panel *panel)
                     aod_config->aod_backlight_threshold = 0;
 		}
        }
-       DSI_INFO("%s:aod_config->enable = %d, aod_config->aod_backlight_threshold =%d\n", __func__,
-            aod_config->enable,aod_config->aod_backlight_threshold);
 
+	aod_config->report_aod_enable = utils->read_bool(utils->data,
+		"qcom,mdss-dsi-panel-AOD-report-enabled");
+
+	DSI_INFO("%s:aod_config->enable = %d, aod_config->aod_backlight_threshold =%d, report_aod_enable = %d,\n",
+		__func__, aod_config->enable,aod_config->aod_backlight_threshold, aod_config->report_aod_enable);
        return 0;
 }
 
@@ -7511,6 +7514,18 @@ error:
 	return rc;
 }
 
+static void dsi_panel_send_trueaod_event(struct dsi_panel *panel, int state)
+{
+	char *envp[2];
+	char event_string[36];
+
+	snprintf(event_string, 36, "SOURCE=trueaod-%u", state);
+	envp[0] = event_string;
+	envp[1] = NULL;
+	kobject_uevent_env(&panel->parent->kobj, KOBJ_CHANGE, envp);
+}
+
+
 int dsi_panel_set_lp1(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -7560,6 +7575,11 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 	if (!panel->panel_initialized)
 		goto exit;
+
+	if(panel->aod_config.report_aod_enable && (!panel->aod_config.aod_state)) {
+		panel->aod_config.aod_state = 1;
+		dsi_panel_send_trueaod_event(panel, 1);
+	}
 
 	if (panel->disp_op == MSM_DISP_OP_HWIO) {
 	if(panel->aod_config.enable && panel->bl_config.brightness_updated < panel->aod_config.aod_backlight_threshold){
@@ -7613,6 +7633,11 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	mutex_lock(&panel->panel_lock);
 	if (!panel->panel_initialized)
 		goto exit;
+
+	if(panel->aod_config.report_aod_enable && panel->aod_config.aod_state) {
+		panel->aod_config.aod_state = 0;
+		dsi_panel_send_trueaod_event(panel, 0);
+	}
 
 	/*
 	 * Consider about LP1->LP2->NOLP.
