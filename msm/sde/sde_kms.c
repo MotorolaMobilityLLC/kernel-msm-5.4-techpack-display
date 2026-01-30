@@ -4849,7 +4849,7 @@ static int sde_kms_set_panel_feature(const struct msm_kms *kms,
 	for (i = 0; i < sde_kms->dsi_display_count; i++){
 		display = (struct dsi_display *)sde_kms->dsi_displays[i];
 		if(!display->panel->panel_send_cmd) {
-			if(param_info_msm.param_idx == PARAM_DC_ID) {
+			if(param_info_msm.param_idx == PARAM_DC_ID && param_info_msm.value) {
 				display->panel->dc_state = param_info_msm.value;
 				SDE_INFO("cache the dsi_displays[%d] set param %d value %d\n",
 					i,param_info_msm.param_idx, param_info_msm.value);
