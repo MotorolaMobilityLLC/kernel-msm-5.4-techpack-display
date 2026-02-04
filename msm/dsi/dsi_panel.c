@@ -7523,6 +7523,8 @@ static void dsi_panel_send_trueaod_event(struct dsi_panel *panel, int state)
 	envp[0] = event_string;
 	envp[1] = NULL;
 	kobject_uevent_env(&panel->parent->kobj, KOBJ_CHANGE, envp);
+
+	DSI_INFO("[%s] dsi_panel_send_trueaod_event %d\n", panel->name, state);
 }
 
 
@@ -8945,6 +8947,11 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	panel->panel_power_cnt++;
 
 	PANEL_NOTIFY(PANEL_EVENT_PRE_DISPLAY_ON);
+
+	if(panel->aod_config.report_aod_enable && panel->aod_config.aod_state) {
+		panel->aod_config.aod_state = 0;
+		dsi_panel_send_trueaod_event(panel, 0);
+	}
 error:
 	mutex_unlock(&panel->panel_lock);
 
@@ -9074,6 +9081,11 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 
 	PANEL_NOTIFY(PANEL_EVENT_DISPLAY_OFF);
+
+	if(panel->aod_config.report_aod_enable && panel->aod_config.aod_state) {
+		panel->aod_config.aod_state = 0;
+		dsi_panel_send_trueaod_event(panel, 0);
+	}
 
 	mutex_unlock(&panel->panel_lock);
 	return rc;
