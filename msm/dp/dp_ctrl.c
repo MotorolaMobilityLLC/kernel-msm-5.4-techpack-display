@@ -804,6 +804,12 @@ static int dp_ctrl_link_setup(struct dp_ctrl_private *ctrl, bool shallow)
 		dp_ctrl_link_rate_down_shift(ctrl);
 	}
 
+	if (ctrl->parser->dp_1_4_disable && link_params->bw_code == DP_LINK_BW_8_1) {
+		DP_INFO("dp_ctrl_link_setup: not support DP_LINK_BW_8_1, downgrade to DP_LINK_BW_5_4\n");
+		ctrl->initial_bw_code = DP_LINK_BW_5_4;
+		link_params->bw_code = DP_LINK_BW_5_4;
+	}
+
 	while (1) {
 		DP_INFO("bw_code=%d, lane_count=%d\n",
 			link_params->bw_code, link_params->lane_count);

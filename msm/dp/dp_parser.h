@@ -312,6 +312,7 @@ struct dp_parser {
 	const char *mst_fixed_display_type[MAX_DP_MST_STREAMS];
 	const char *display_type;
 	bool dp_downgrade;
+	bool dp_1_4_disable;
 
 	u8 *swing_hbr2_3;
 	u8 *pre_emp_hbr2_3;

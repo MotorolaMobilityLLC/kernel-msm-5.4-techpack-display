@@ -183,8 +183,11 @@ static int dp_parser_misc(struct dp_parser *parser)
 	parser->dp_downgrade = of_property_read_bool(of_node,
 			"qcom,dp-downgrade");
 
-	DP_INFO("dp_parser_misc max_pclk_khz=%d, max_lclk_khz=%d dp_downgrade=%d\n",
-		parser->max_pclk_khz, parser->max_lclk_khz, parser->dp_downgrade);
+	parser->dp_1_4_disable = of_property_read_bool(of_node,
+			"qcom,dp-hbr3-disable");
+
+	DP_INFO("dp_parser_misc max_pclk_khz=%d, max_lclk_khz=%d dp_downgrade=%d dp_1_4_disable=%d\n",
+		parser->max_pclk_khz, parser->max_lclk_khz, parser->dp_downgrade, parser->dp_1_4_disable);
 
 
 	rc = of_property_read_u32(of_node,
