@@ -6438,7 +6438,7 @@ static void _sde_get_hw_caps_for_alor(struct sde_mdss_cfg *sde_cfg, uint32_t hw_
 	set_bit(SDE_FEATURE_SYS_CACHE_NSE, sde_cfg->features);
 	set_bit(SDE_FEATURE_SYS_CACHE_STALING, sde_cfg->features);
 	set_bit(SDE_FEATURE_WB_ROTATION, sde_cfg->features);
-	set_bit(SDE_FEATURE_EPT, sde_cfg->features);
+	//set_bit(SDE_FEATURE_EPT, sde_cfg->features);
 	set_bit(SDE_FEATURE_10_BITS_COMPONENTS, sde_cfg->features);
 	set_bit(SDE_FEATURE_DS_PU_SUPPORTED, sde_cfg->features);
 	sde_cfg->allowed_dsc_reservation_switch = SDE_DP_DSC_RESERVATION_SWITCH;
