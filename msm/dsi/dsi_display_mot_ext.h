@@ -68,6 +68,7 @@ enum dsi_display_mode_group_flag {
         RRGSFlag_Partition_Refreshrate  = 1 << 5,   // Only can be selected when use partition refreshrate
         RRGSFlag_Partition_Refreshrate_LP = 1 << 6,   // Only can be selected when use low power partition refreshrate
         RRGSFlag_VRR_Refreshrate_120hz = 1 << 7,   // Only can be selected when use vrr qsync on/off refreshrate
+	RRGSFlag_Resolution_1080p_Based = 1 << 8, //only can be selected when use 1080p to support dual resolution, such as 2K & 1080p.
 };
 #define PARTITION_REFRESHRATE 121
 #define PARTITION_REFRESHRATE_LP 161
