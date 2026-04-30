@@ -2738,6 +2738,29 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		DSI_INFO("[%s] dfps cmd delay effect list parse success\n", name);
 	}
 
+	dfps_caps->dfps_update_wait_te_list_len = utils->count_u32_elems(utils->data,
+					"qcom,dsi-supported-dfps-update-wait-te-list");
+	if (dfps_caps->dfps_update_wait_te_list_len > 0) {
+		dfps_caps->dfps_update_wait_te_list = kcalloc(dfps_caps->dfps_update_wait_te_list_len, sizeof(u32),
+				GFP_KERNEL);
+		if (!dfps_caps->dfps_update_wait_te_list) {
+			rc = -ENOMEM;
+			goto error;
+		}
+
+		rc = utils->read_u32_array(utils->data,
+				"qcom,dsi-supported-dfps-update-wait-te-list",
+				dfps_caps->dfps_update_wait_te_list,
+				dfps_caps->dfps_update_wait_te_list_len);
+		if (rc) {
+			DSI_ERR("[%s] failed to parse 'qcom,dsi-supported-dfps-update-wait-te-list'\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+
+		DSI_INFO("[%s] dfps update check te list parse success\n", name);
+	}
+
 	if(dfps_caps->type == DSI_DFPS_IMMEDIATE_CUS){
         	dfps_caps->dfps_vfp_list_len = utils->count_u32_elems(utils->data,
         				  "qcom,dsi-supported-dfps-vfp-list");
@@ -6053,6 +6076,7 @@ void dsi_panel_put(struct dsi_panel *panel)
 
 	kfree(panel->avr_caps.avr_step_fps_list);
 	kfree(panel->dfps_caps.dfps_cmd_delay_effect_list);
+	kfree(panel->dfps_caps.dfps_update_wait_te_list);
 	kfree(panel);
 }
 

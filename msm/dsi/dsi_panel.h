@@ -138,6 +138,8 @@ struct dsi_dfps_capabilities {
 	u32 dfps_hfp_list_len;
 	u32 *dfps_cmd_delay_effect_list;
 	int dfps_cmd_delay_effect_list_len;
+	u32 *dfps_update_wait_te_list;
+	int dfps_update_wait_te_list_len;
 };
 
 struct dsi_qsync_capabilities {

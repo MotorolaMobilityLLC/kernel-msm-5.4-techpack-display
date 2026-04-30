@@ -319,6 +319,8 @@ struct dsi_display {
 	bool sysfs_add_done;
 	u8 cellid[MAX_PANEL_CELLID];
 	bool read_cellid;
+
+	atomic_t wait_te_done;
 };
 
 int dsi_display_dev_probe(struct platform_device *pdev);

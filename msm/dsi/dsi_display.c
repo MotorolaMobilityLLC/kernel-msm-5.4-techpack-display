@@ -487,6 +487,7 @@ static irqreturn_t dsi_display_panel_te_irq_handler(int irq, void *data)
 		return IRQ_HANDLED;
 
 	SDE_EVT32(SDE_EVTLOG_FUNC_CASE1);
+	atomic_set(&display->wait_te_done, 1);
 	complete_all(&display->esd_te_gate);
 	return IRQ_HANDLED;
 }
@@ -1030,6 +1031,44 @@ static int dsi_display_status_check_te(struct dsi_display *display,
 			dsi_display_change_te_irq_status(display, false);
 			return -EINVAL;
 		}
+	}
+
+	dsi_display_change_te_irq_status(display, false);
+	dsi_display_release_te_irq(display);
+
+	return rc;
+}
+
+static int dsi_display_wait_te_polling(struct dsi_display *display)
+{
+	int rc = 0;
+	u32 frame_ms;
+	ktime_t timeout_time;
+
+	if (!display) {
+		DSI_ERR("Invalid params\n");
+		return -EINVAL;
+	}
+
+	frame_ms = (display->panel->dfps_caps.current_fps > 0) ?
+		(1000 / display->panel->dfps_caps.current_fps + 1) : 17;
+	timeout_time = ktime_add_ms(ktime_get(), frame_ms * 2);
+
+	/* register te irq handler */
+	dsi_display_register_te_irq(display);
+	dsi_display_change_te_irq_status(display, true);
+	atomic_set(&display->wait_te_done, 0);
+
+	/* wait for TE signal without blocking */
+	while (!atomic_read(&display->wait_te_done)) {
+		if (unlikely(ktime_after(ktime_get(), timeout_time))) {
+			if (!atomic_read(&display->wait_te_done)) {
+				DSI_ERR("TE check failed\n");
+				dsi_display_change_te_irq_status(display, false);
+				return -EINVAL;
+			}
+		}
+		usleep_range(50, 100);
 	}
 
 	dsi_display_change_te_irq_status(display, false);
@@ -5748,6 +5787,15 @@ static int dsi_display_set_mode_sub(struct dsi_display *display,
 			if ((display->panel->dfps_caps.current_fps != 60)&&(display->panel->dfps_caps.current_fps != 90))
 				dsi_display_status_check_te(display,1);
 		}
+
+		if (display->panel->dfps_caps.dfps_update_wait_te_list) {
+			for (i=0; i < display->panel->dfps_caps.dfps_update_wait_te_list_len; i++)
+				if (display->panel->dfps_caps.current_fps == display->panel->dfps_caps.dfps_update_wait_te_list[i]) {
+					dsi_display_wait_te_polling(display);
+					break;
+				}
+		}
+
 		rc = dsi_display_dfps_update(display, mode);
 		if (rc) {
 			DSI_ERR("[%s]DSI dfps update failed, rc=%d\n",
